@@ -1,0 +1,60 @@
+{
+  "services": [
+    {
+      "name": "Azure Active Directory",
+      "hostedOn": "Microsoft Azure",
+      "description": "",
+      "id": 1
+    },
+    {
+      "name": "Sharepoint Online",
+      "hostedOn": "Microsoft Azure",
+      "description": "",
+      "id": 2
+    },
+    {
+      "id": 3,
+      "name": "Exchange Online",
+      "hostedOn": "Microsoft Azure",
+      "description": ""
+    },
+    {
+      "name": "On-Premise Active Directory",
+      "hostedOn": "ad01",
+      "description": "Primary Domain Controller",
+      "id": 4
+    }
+  ],
+  "connections": [
+    {
+      "id": 0,
+      "name": "SP AAD Auth",
+      "from": 2,
+      "to": 1,
+      "connectionType": "HTTPS",
+      "connectionDetails": "",
+      "authentication": "appsecret",
+      "description": ""
+    },
+    {
+      "id": 1,
+      "name": "EXCH AAD Auth",
+      "from": 3,
+      "to": 1,
+      "connectionType": "HTTPS",
+      "connectionDetails": "",
+      "authentication": "appsecret",
+      "description": ""
+    },
+    {
+      "id": 2,
+      "name": "Azure AD Connect",
+      "from": 4,
+      "to": 1,
+      "connectionType": "HTTPS",
+      "connectionDetails": "User Synchronization",
+      "authentication": "user/password: admin@example.org",
+      "description": "syncs every 30min"
+    }
+  ]
+}
