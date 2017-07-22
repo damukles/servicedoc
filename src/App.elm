@@ -13,7 +13,7 @@ import Pages.Service
 import RemoteData exposing (RemoteData(..), WebData)
 import Routing exposing (Route(..))
 import Types exposing (..)
-import Util exposing (emptyService, emptyConnection, findById, readyStateById)
+import Util exposing (emptyService, emptyConnection, findById, editableById)
 import Visualization.Force as Force exposing (State)
 
 
@@ -237,13 +237,13 @@ parseAndPrepareRoute services connections location =
                     ( Ready emptyService, NoIntention )
 
                 Just (ServicesEdit id) ->
-                    ( readyStateById id services, NoIntention )
+                    ( editableById id services, NoIntention )
 
                 Just ConnectionsAdd ->
                     ( NoIntention, Ready emptyConnection )
 
                 Just (ConnectionsEdit id) ->
-                    ( NoIntention, readyStateById id connections )
+                    ( NoIntention, editableById id connections )
 
                 _ ->
                     ( NoIntention, NoIntention )

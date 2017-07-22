@@ -6,8 +6,8 @@ import RemoteData exposing (WebData, RemoteData(..))
 import Types exposing (Editable(..))
 
 
-readyStateById : Int -> WebData (Dict Int a) -> Editable Int a
-readyStateById id a =
+editableById : Int -> WebData (Dict Int a) -> Editable Int a
+editableById id a =
     case a of
         Success a_ ->
             case Dict.get id a_ of

@@ -79,14 +79,14 @@
       "description": ""
     },
     {
+      "id": 4,
       "name": "Intranet SQL Connection",
       "from": 5,
       "to": 6,
       "connectionType": "TCP 1433",
       "connectionDetails": "",
       "authentication": "EXAMPLE\\servicesql",
-      "description": "",
-      "id": 4
+      "description": ""
     }
   ]
 }
