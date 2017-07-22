@@ -42,14 +42,21 @@ type alias Model =
     , navbar : Navbar.State
     , servicesViewState : Pages.Service.State
     , connectionsViewState : Pages.Connection.State
-    , currentService : Maybe Service
-    , currentConnection : Maybe Connection
+    , currentService : Editable Int Service
+    , currentConnection : Editable Int Connection
     , lastAlert : Maybe String
     , services : WebData (Dict Int Service)
     , connections : WebData (Dict Int Connection)
     , graph : Maybe (Graph Entity ())
     , simulation : Maybe (Force.State NodeId)
     }
+
+
+type Editable i a
+    = NotReady i
+    | Ready a
+    | NotFound
+    | NoIntention
 
 
 type alias Entity =

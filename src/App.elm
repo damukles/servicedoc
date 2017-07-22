@@ -13,6 +13,7 @@ import Pages.Service
 import RemoteData exposing (RemoteData(..), WebData)
 import Routing exposing (Route(..))
 import Types exposing (..)
+import Util exposing (emptyService, emptyConnection, findById, readyStateById)
 import Visualization.Force as Force exposing (State)
 
 
@@ -42,16 +43,6 @@ init location =
               , Api.getServices ResultGetServices
               , Api.getConnections ResultGetConnections
               ]
-
-
-emptyService : Service
-emptyService =
-    Service -1 "" "" ""
-
-
-emptyConnection : Connection
-emptyConnection =
-    Connection -1 "" -1 -1 "" "" "" ""
 
 
 oops : String
@@ -161,7 +152,7 @@ update msg ({ graph, simulation } as model) =
                 { model | lastAlert = Just oops } ! []
 
         UpdateCurrentService service ->
-            { model | currentService = Just service } ! []
+            { model | currentService = Ready service } ! []
 
         EditService service ->
             model ! [ Api.updateService service ResultUpdateService ]
@@ -203,7 +194,7 @@ update msg ({ graph, simulation } as model) =
                 { model | lastAlert = Just oops } ! []
 
         UpdateCurrentConnection connection ->
-            { model | currentConnection = Just connection } ! []
+            { model | currentConnection = Ready connection } ! []
 
         EditConnection connection ->
             model ! [ Api.updateConnection connection ResultUpdateConnection ]
@@ -234,7 +225,7 @@ update msg ({ graph, simulation } as model) =
                     ! []
 
 
-parseAndPrepareRoute : WebData (Dict Int Service) -> WebData (Dict Int Connection) -> Location -> ( Maybe Route, Maybe Service, Maybe Connection )
+parseAndPrepareRoute : WebData (Dict Int Service) -> WebData (Dict Int Connection) -> Location -> ( Maybe Route, Editable Int Service, Editable Int Connection )
 parseAndPrepareRoute services connections location =
     let
         currentLocation =
@@ -243,31 +234,21 @@ parseAndPrepareRoute services connections location =
         ( currentService, currentConnection ) =
             case currentLocation of
                 Just ServicesAdd ->
-                    ( Just emptyService, Nothing )
+                    ( Ready emptyService, NoIntention )
 
                 Just (ServicesEdit id) ->
-                    ( findById id services, Nothing )
+                    ( readyStateById id services, NoIntention )
 
                 Just ConnectionsAdd ->
-                    ( Nothing, Just emptyConnection )
+                    ( NoIntention, Ready emptyConnection )
 
                 Just (ConnectionsEdit id) ->
-                    ( Nothing, findById id connections )
+                    ( NoIntention, readyStateById id connections )
 
                 _ ->
-                    ( Nothing, Nothing )
+                    ( NoIntention, NoIntention )
     in
         ( currentLocation, currentService, currentConnection )
-
-
-findById : Int -> WebData (Dict Int a) -> Maybe a
-findById id a =
-    case a of
-        Success a_ ->
-            Dict.get id a_
-
-        _ ->
-            Nothing
 
 
 updateGraphAndSim : WebData (Dict Int Service) -> WebData (Dict Int Connection) -> ( Maybe (Graph Entity ()), Maybe (State Int) )
