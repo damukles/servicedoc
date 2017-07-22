@@ -12,12 +12,12 @@ import Types exposing (..)
 
 screenWidth : Float
 screenWidth =
-    1200
+    1000
 
 
 screenHeight : Float
 screenHeight =
-    800
+    600
 
 
 updateContextWithValue : NodeContext Entity () -> Entity -> NodeContext Entity ()

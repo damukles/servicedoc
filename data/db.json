@@ -23,6 +23,18 @@
       "hostedOn": "ad01",
       "description": "Primary Domain Controller",
       "id": 4
+    },
+    {
+      "name": "Intranet WebApp",
+      "hostedOn": "iis01",
+      "description": "",
+      "id": 5
+    },
+    {
+      "name": "Intranet SQL",
+      "hostedOn": "sql01",
+      "description": "",
+      "id": 6
     }
   ],
   "connections": [
@@ -55,6 +67,26 @@
       "connectionDetails": "User Synchronization",
       "authentication": "user/password: admin@example.org",
       "description": "syncs every 30min"
+    },
+    {
+      "id": 3,
+      "name": "IIS Auth",
+      "from": 5,
+      "to": 4,
+      "connectionType": "LDAP",
+      "connectionDetails": "",
+      "authentication": "EXAMPLE\\reader",
+      "description": ""
+    },
+    {
+      "name": "Intranet SQL Connection",
+      "from": 5,
+      "to": 6,
+      "connectionType": "TCP 1433",
+      "connectionDetails": "",
+      "authentication": "EXAMPLE\\servicesql",
+      "description": "",
+      "id": 4
     }
   ]
 }

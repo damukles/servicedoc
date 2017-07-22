@@ -151,7 +151,7 @@ update msg ({ graph, simulation } as model) =
                         _ ->
                             ( model.services, Api.getServices ResultGetServices )
             in
-                { model | services = services_ } ! [ cmd, Navigation.newUrl <| lastRoute model.history ]
+                { model | services = services_, lastAlert = Nothing } ! [ cmd, Navigation.back 1 ]
 
         ResultAddService (Err err) ->
             let
@@ -171,7 +171,7 @@ update msg ({ graph, simulation } as model) =
                 services_ =
                     RemoteData.map (Dict.insert service.id service) model.services
             in
-                { model | services = services_ } ! [ Navigation.newUrl <| lastRoute model.history ]
+                { model | services = services_, lastAlert = Nothing } ! [ Navigation.back 1 ]
 
         ResultUpdateService (Err err) ->
             let
@@ -193,7 +193,7 @@ update msg ({ graph, simulation } as model) =
                         _ ->
                             ( model.connections, Api.getConnections ResultGetConnections )
             in
-                { model | connections = connections_ } ! [ cmd, Navigation.newUrl <| lastRoute model.history ]
+                { model | connections = connections_, lastAlert = Nothing } ! [ cmd, Navigation.back 1 ]
 
         ResultAddConnection (Err err) ->
             let
@@ -213,7 +213,7 @@ update msg ({ graph, simulation } as model) =
                 connections_ =
                     RemoteData.map (Dict.insert connection.id connection) model.connections
             in
-                { model | connections = connections_ } ! [ Navigation.newUrl <| lastRoute model.history ]
+                { model | connections = connections_, lastAlert = Nothing } ! [ Navigation.back 1 ]
 
         ResultUpdateConnection (Err err) ->
             let
@@ -232,16 +232,6 @@ update msg ({ graph, simulation } as model) =
                     , simulation = simulation
                 }
                     ! []
-
-
-lastRoute : List Location -> String
-lastRoute history =
-    case List.head <| Maybe.withDefault [] <| List.tail history of
-        Just location ->
-            location.hash
-
-        Nothing ->
-            Routing.getLink Routing.defaultRoute
 
 
 parseAndPrepareRoute : WebData (Dict Int Service) -> WebData (Dict Int Connection) -> Location -> ( Maybe Route, Maybe Service, Maybe Connection )
