@@ -9,6 +9,7 @@ import Bootstrap.Grid as Grid
 import Bootstrap.Form.Input as Input
 import Bootstrap.Form.Textarea as Textarea
 import Api.Entities exposing (Service)
+import Validation exposing (isValidStringProp, isValidIdProp)
 
 
 type alias Config msg =
@@ -28,11 +29,17 @@ view { updateMsg, saveMsg, alert } service =
 
                 Nothing ->
                     text ""
+
+        groupDangerIfNot bool =
+            if bool then
+                []
+            else
+                [ Form.groupDanger ]
     in
         Grid.container []
             [ Form.form []
                 [ alertMessage
-                , Form.group []
+                , Form.group (groupDangerIfNot <| isValidStringProp service.name)
                     [ Form.label [ for "nam" ] [ text "Name" ]
                     , Input.text
                         [ Input.id "nam"
@@ -41,7 +48,7 @@ view { updateMsg, saveMsg, alert } service =
                         ]
                     , Form.help [] [ text "The service's name" ]
                     ]
-                , Form.group []
+                , Form.group (groupDangerIfNot <| isValidStringProp service.hostedOn)
                     [ Form.label [ for "hon" ] [ text "Hosted on" ]
                     , Input.text
                         [ Input.id "hon"
@@ -60,7 +67,7 @@ view { updateMsg, saveMsg, alert } service =
                         ]
                     , Form.help [] [ text "Whatever is important" ]
                     ]
-                , Button.button [ Button.onClick <| saveMsg service, Button.disabled <| isInvalid service ]
+                , Button.button [ Button.onClick <| saveMsg service, Button.disabled <| not <| isValid service ]
                     [ text "Save" ]
                 ]
             ]
@@ -81,6 +88,6 @@ setDescription msg service description =
     msg { service | description = description }
 
 
-isInvalid : { a | hostedOn : String, name : String } -> Bool
-isInvalid { name, hostedOn } =
-    String.length name < 2 || String.length hostedOn < 2
+isValid : { a | hostedOn : String, name : String } -> Bool
+isValid { name, hostedOn } =
+    isValidStringProp name && isValidStringProp hostedOn

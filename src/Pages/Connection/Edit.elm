@@ -10,6 +10,7 @@ import Bootstrap.Form.Input as Input
 import Bootstrap.Form.Textarea as Textarea
 import Bootstrap.Form.Select as Select
 import Api.Entities exposing (Connection, Service)
+import Validation exposing (isValidStringProp, isValidIdProp)
 
 
 type alias Config msg =
@@ -29,11 +30,17 @@ view { updateMsg, saveMsg, alert } services connection =
 
                 Nothing ->
                     text ""
+
+        groupDangerIfNot bool =
+            if bool then
+                []
+            else
+                [ Form.groupDanger ]
     in
         Grid.container []
             [ Form.form []
                 [ alertMessage
-                , Form.group []
+                , Form.group (groupDangerIfNot <| isValidStringProp connection.name)
                     [ Form.label [ for "nam" ] [ text "Name" ]
                     , Input.text
                         [ Input.id "nam"
@@ -42,7 +49,7 @@ view { updateMsg, saveMsg, alert } services connection =
                         ]
                     , Form.help [] [ text "The connection's name" ]
                     ]
-                , Form.group []
+                , Form.group (groupDangerIfNot <| isValidIdProp connection.from)
                     [ Form.label [ for "from" ] [ text "From" ]
                     , Select.select
                         [ Select.id "from"
@@ -52,7 +59,7 @@ view { updateMsg, saveMsg, alert } services connection =
                         serviceSelectOptions connection.from services
                     , Form.help [] [ text "First Endpoint" ]
                     ]
-                , Form.group []
+                , Form.group (groupDangerIfNot <| isValidIdProp connection.to)
                     [ Form.label [ for "to" ] [ text "To" ]
                     , Select.select
                         [ Select.id "to"
@@ -62,7 +69,7 @@ view { updateMsg, saveMsg, alert } services connection =
                         serviceSelectOptions connection.to services
                     , Form.help [] [ text "Second Endpoint" ]
                     ]
-                , Form.group []
+                , Form.group (groupDangerIfNot <| isValidStringProp connection.connectionType)
                     [ Form.label [ for "cont" ] [ text "Connection Type" ]
                     , Input.text
                         [ Input.id "cont"
@@ -99,7 +106,7 @@ view { updateMsg, saveMsg, alert } services connection =
                         ]
                     , Form.help [] [ text "Whatever is important" ]
                     ]
-                , Button.button [ Button.onClick <| saveMsg connection, Button.disabled <| isInvalid connection ]
+                , Button.button [ Button.onClick <| saveMsg connection, Button.disabled <| not <| isValid connection ]
                     [ text "Save" ]
                 ]
             ]
@@ -159,14 +166,6 @@ setDescription msg connection description =
     msg { connection | description = description }
 
 
-isInvalid :
-    { a
-        | authentication : String
-        , connectionType : String
-        , from : Int
-        , name : String
-        , to : Int
-    }
-    -> Bool
-isInvalid { name, connectionType, authentication, from, to } =
-    String.length name < 2 || String.length connectionType < 2 || from < 0 || to < 0
+isValid : Connection -> Bool
+isValid { name, connectionType, from, to } =
+    isValidStringProp name && isValidStringProp connectionType && isValidIdProp from && isValidIdProp to
