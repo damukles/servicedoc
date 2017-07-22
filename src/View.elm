@@ -70,24 +70,10 @@ content model =
         Just (ServicesEdit id) ->
             case model.currentService of
                 NotReady int ->
-                    let
-                        config =
-                            { updateMsg = UpdateCurrentService
-                            , saveMsg = EditService
-                            , alert = model.lastAlert
-                            }
-                    in
-                        Pages.Service.Edit.view config <| Maybe.withDefault emptyService <| findById id model.services
+                    serviceEditView model <| Maybe.withDefault emptyService <| findById id model.services
 
                 Ready service ->
-                    let
-                        config =
-                            { updateMsg = UpdateCurrentService
-                            , saveMsg = EditService
-                            , alert = model.lastAlert
-                            }
-                    in
-                        Pages.Service.Edit.view config service
+                    serviceEditView model service
 
                 NotFound ->
                     Pages.Error.view "Service not found."
@@ -122,30 +108,10 @@ content model =
         Just (ConnectionsEdit id) ->
             case model.currentConnection of
                 NotReady id ->
-                    let
-                        config =
-                            { updateMsg = UpdateCurrentConnection
-                            , saveMsg = EditConnection
-                            , alert = model.lastAlert
-                            }
-
-                        services =
-                            valuesFromRemoteDataDict model.services
-                    in
-                        Pages.Connection.Edit.view config services <| Maybe.withDefault emptyConnection <| findById id model.connections
+                    connectionEditView model <| Maybe.withDefault emptyConnection <| findById id model.connections
 
                 Ready connection ->
-                    let
-                        config =
-                            { updateMsg = UpdateCurrentConnection
-                            , saveMsg = EditConnection
-                            , alert = model.lastAlert
-                            }
-
-                        services =
-                            valuesFromRemoteDataDict model.services
-                    in
-                        Pages.Connection.Edit.view config services connection
+                    connectionEditView model connection
 
                 NotFound ->
                     Pages.Error.view "Connection not found."
@@ -158,6 +124,36 @@ content model =
 
         Nothing ->
             Pages.Graph.view model
+
+
+serviceEditView : { a | lastAlert : Maybe String } -> Api.Entities.Service -> Html Msg
+serviceEditView model service =
+    let
+        config =
+            { updateMsg = UpdateCurrentService
+            , saveMsg = EditService
+            , alert = model.lastAlert
+            }
+    in
+        Pages.Service.Edit.view config service
+
+
+connectionEditView :
+    { a | lastAlert : Maybe String, services : RemoteData e (Dict.Dict comparable Api.Entities.Service) }
+    -> Connection
+    -> Html Msg
+connectionEditView model connection =
+    let
+        config =
+            { updateMsg = UpdateCurrentConnection
+            , saveMsg = EditConnection
+            , alert = model.lastAlert
+            }
+
+        services =
+            valuesFromRemoteDataDict model.services
+    in
+        Pages.Connection.Edit.view config services connection
 
 
 connectionsView : (Connection -> Bool) -> Model -> Html Msg
