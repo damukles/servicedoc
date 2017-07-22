@@ -1,7 +1,7 @@
 module Pages.Connection.Edit exposing (view)
 
 import Html exposing (Html, div, text)
-import Html.Attributes exposing (for, value, selected)
+import Html.Attributes exposing (for, value, selected, disabled)
 import Bootstrap.Alert as Alert
 import Bootstrap.Button as Button
 import Bootstrap.Grid as Grid
@@ -49,7 +49,7 @@ view { updateMsg, saveMsg, alert } services connection =
                         , Select.onChange <| setFrom updateMsg connection
                         ]
                       <|
-                        List.map (viewServiceSelect connection.from) services
+                        serviceSelectOptions connection.from services
                     , Form.help [] [ text "First Endpoint" ]
                     ]
                 , Form.group []
@@ -59,7 +59,7 @@ view { updateMsg, saveMsg, alert } services connection =
                         , Select.onChange <| setTo updateMsg connection
                         ]
                       <|
-                        List.map (viewServiceSelect connection.to) services
+                        serviceSelectOptions connection.to services
                     , Form.help [] [ text "Second Endpoint" ]
                     ]
                 , Form.group []
@@ -105,9 +105,23 @@ view { updateMsg, saveMsg, alert } services connection =
             ]
 
 
+serviceSelectOptions : Int -> List Service -> List (Select.Item msg)
+serviceSelectOptions id services =
+    List.map (viewServiceSelect id) services
+        |> addDefaultOption id
+
+
 viewServiceSelect : Int -> Service -> Select.Item msg
 viewServiceSelect id service =
     Select.item [ value <| toString service.id, selected (id == service.id) ] [ text service.name ]
+
+
+addDefaultOption : Int -> List (Select.Item msg) -> List (Select.Item msg)
+addDefaultOption id list =
+    if id < 0 then
+        (Select.item [ value "-1", selected True, disabled True ] [ text "--- select a service ---" ]) :: list
+    else
+        list
 
 
 setName : ({ b | name : a } -> msg) -> { b | name : d } -> a -> msg
@@ -155,4 +169,4 @@ isInvalid :
     }
     -> Bool
 isInvalid { name, connectionType, authentication, from, to } =
-    String.length name < 2 || String.length connectionType < 2 || String.length authentication < 2 || from < 0 || to < 0
+    String.length name < 2 || String.length connectionType < 2 || from < 0 || to < 0
