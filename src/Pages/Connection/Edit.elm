@@ -1,6 +1,6 @@
 module Pages.Connection.Edit exposing (Model, Msg, init, update, view)
 
-import Api.Entities exposing (Connection, Service)
+import Api.Entities exposing (Connection, Service, emptyConnection)
 import Api.Request as Api
 import Bootstrap.Alert as Alert
 import Bootstrap.Button as Button
@@ -15,7 +15,6 @@ import Http
 import Navigation
 import RemoteData exposing (RemoteData(..), WebData)
 import Routing exposing (Route(..))
-import Util exposing (emptyConnection)
 import Validation exposing (isValidIdProp, isValidStringProp)
 
 

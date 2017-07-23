@@ -15,7 +15,6 @@ import Pages.Service.Edit
 import RemoteData exposing (RemoteData(..))
 import Routing exposing (Route(..))
 import Types exposing (..)
-import Util exposing (emptyConnection, emptyService, findById)
 
 
 view : Model -> Html Msg
@@ -53,32 +52,19 @@ content model =
                 Pages.Service.view config model.servicesViewState services
 
         Just ServicesAdd ->
-            case model.currentService of
-                Ready service ->
-                    let
-                        config =
-                            { updateMsg = UpdateCurrentService
-                            , saveMsg = AddService
-                            , alert = model.lastAlert
-                            }
-                    in
-                        Pages.Service.Edit.view config service
+            case model.subPage of
+                EditServicePage pageModel ->
+                    Html.map EditServicePageMsg <| Pages.Service.Edit.view pageModel
 
                 _ ->
                     Pages.Error.view "You found a bug. Please report."
 
         Just (ServicesEdit id) ->
-            case model.currentService of
-                NotReady int ->
-                    serviceEditView model <| Maybe.withDefault emptyService <| findById id model.services
+            case model.subPage of
+                EditServicePage pageModel ->
+                    Html.map EditServicePageMsg <| Pages.Service.Edit.view pageModel
 
-                Ready service ->
-                    serviceEditView model service
-
-                NotFound ->
-                    Pages.Error.view "Service not found."
-
-                NoIntention ->
+                _ ->
                     Pages.Error.view "You found a bug. Please report."
 
         Just (ServicesConnections id) ->
@@ -95,22 +81,6 @@ content model =
                 _ ->
                     Pages.Error.view "You found a bug. Please report."
 
-        -- case model.currentConnection of
-        --     Ready connection ->
-        --         let
-        --             config =
-        --                 { updateMsg = UpdateCurrentConnection
-        --                 , saveMsg = AddConnection
-        --                 , alert = model.lastAlert
-        --                 }
-        --
-        --             services =
-        --                 valuesFromRemoteDataDict model.services
-        --         in
-        --             Pages.Connection.Edit.view config services connection
-        --
-        --     _ ->
-        --         Pages.Error.view "You found a bug. Please report."
         Just (ConnectionsEdit id) ->
             case model.subPage of
                 EditConnectionPage pageModel ->
@@ -119,54 +89,11 @@ content model =
                 _ ->
                     Pages.Error.view "You found a bug. Please report."
 
-        -- case model.currentConnection of
-        --     NotReady id ->
-        --         connectionEditView model <| Maybe.withDefault emptyConnection <| findById id model.connections
-        --
-        --     Ready connection ->
-        --         connectionEditView model connection
-        --
-        --     NotFound ->
-        --         Pages.Error.view "Connection not found."
-        --
-        --     NoIntention ->
-        --         Pages.Error.view "You found a bug. Please report."
         Just Graph ->
             Pages.Graph.view model
 
         Nothing ->
             Pages.Graph.view model
-
-
-serviceEditView : { a | lastAlert : Maybe String } -> Api.Entities.Service -> Html Msg
-serviceEditView model service =
-    let
-        config =
-            { updateMsg = UpdateCurrentService
-            , saveMsg = EditService
-            , alert = model.lastAlert
-            }
-    in
-        Pages.Service.Edit.view config service
-
-
-
--- connectionEditView :
---     { a | lastAlert : Maybe String, services : RemoteData e (Dict.Dict comparable Api.Entities.Service) }
---     -> Connection
---     -> Html Msg
--- connectionEditView model connection =
---     let
---         config =
---             { updateMsg = UpdateCurrentConnection
---             , saveMsg = EditConnection
---             , alert = model.lastAlert
---             }
---
---         services =
---             valuesFromRemoteDataDict model.services
---     in
---         Pages.Connection.Edit.view config services connection
 
 
 connectionsView : (Connection -> Bool) -> Model -> Html Msg

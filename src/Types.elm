@@ -1,18 +1,19 @@
 module Types exposing (..)
 
+import Api.Entities exposing (Connection, Service)
 import Bootstrap.Navbar as Navbar
 import Dict exposing (Dict)
+import Graph exposing (Graph, NodeId)
 import Http
 import Navigation exposing (Location)
-import Graph exposing (Graph, NodeId)
-import RemoteData exposing (WebData)
-import Time exposing (Time)
-import Visualization.Force as Force
-import Api.Entities exposing (Service, Connection)
-import Pages.Service
 import Pages.Connection
 import Pages.Connection.Edit
+import Pages.Service
+import Pages.Service.Edit
+import RemoteData exposing (WebData)
 import Routing exposing (Route)
+import Time exposing (Time)
+import Visualization.Force as Force
 
 
 type Msg
@@ -21,15 +22,11 @@ type Msg
     | UrlChange Location
     | NavbarMsg Navbar.State
     | EditConnectionPageMsg Pages.Connection.Edit.Msg
+    | EditServicePageMsg Pages.Service.Edit.Msg
     | ServicesViewMsg Pages.Service.State
     | ConnectionsViewMsg Pages.Connection.State
     | ResultGetServices (Result Http.Error (List Service))
     | ResultGetConnections (Result Http.Error (List Connection))
-    | AddService Service
-    | ResultAddService (Result Http.Error Service)
-    | UpdateCurrentService Service
-    | EditService Service
-    | ResultUpdateService (Result Http.Error Service)
     | RefreshGraph
 
 
@@ -39,9 +36,7 @@ type alias Model =
     , navbar : Navbar.State
     , servicesViewState : Pages.Service.State
     , connectionsViewState : Pages.Connection.State
-    , currentService : Editable Int Service
     , subPage : Page
-    , lastAlert : Maybe String
     , services : WebData (Dict Int Service)
     , connections : WebData (Dict Int Connection)
     , graph : Maybe (Graph Entity ())
@@ -52,13 +47,7 @@ type alias Model =
 type Page
     = None
     | EditConnectionPage Pages.Connection.Edit.Model
-
-
-type Editable i a
-    = NotReady i
-    | Ready a
-    | NotFound
-    | NoIntention
+    | EditServicePage Pages.Service.Edit.Model
 
 
 type alias Entity =

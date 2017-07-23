@@ -7,9 +7,9 @@ import Json.Encode
 
 type alias Service =
     { id : Int
-    , name : String
-
-    -- normalize
+    , name :
+        String
+        -- normalize
     , hostedOn : String
     , description : String
     }
@@ -19,13 +19,13 @@ type alias Connection =
     { id : Int
     , name : String
     , from : Int
-    , to : Int
-
-    -- normalize
+    , to :
+        Int
+        -- normalize
     , connectionType : String
-    , connectionDetails : String
-
-    -- normalize
+    , connectionDetails :
+        String
+        -- normalize
     , authentication : String
     , description : String
     }
@@ -87,3 +87,13 @@ encodeConnection withId connection =
                 ( "id", Json.Encode.int connection.id ) :: descriptor
             else
                 descriptor
+
+
+emptyService : Service
+emptyService =
+    Service -1 "" "" ""
+
+
+emptyConnection : Connection
+emptyConnection =
+    Connection -1 "" -1 -1 "" "" "" ""

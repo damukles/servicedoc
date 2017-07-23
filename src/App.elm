@@ -11,10 +11,10 @@ import Pages.Connection
 import Pages.Connection.Edit
 import Pages.Graph
 import Pages.Service
+import Pages.Service.Edit
 import RemoteData exposing (RemoteData(..), WebData)
 import Routing exposing (Route(..))
 import Types exposing (..)
-import Util exposing (emptyConnection, emptyService, findById)
 import Visualization.Force as Force exposing (State)
 
 
@@ -37,9 +37,7 @@ init location =
         , connectionsViewState = Pages.Connection.init
         , services = NotAsked
         , connections = NotAsked
-        , currentService = NoIntention
         , subPage = page
-        , lastAlert = Nothing
         , graph = Nothing
         , simulation = Nothing
         }
@@ -66,6 +64,20 @@ pageFromRoute route =
                     Pages.Connection.Edit.init (Just id)
             in
                 ( EditConnectionPage pageModel, Cmd.map EditConnectionPageMsg pageCmd )
+
+        Just ServicesAdd ->
+            let
+                ( pageModel, pageCmd ) =
+                    Pages.Service.Edit.init Nothing
+            in
+                ( EditServicePage pageModel, Cmd.map EditServicePageMsg pageCmd )
+
+        Just (ServicesEdit id) ->
+            let
+                ( pageModel, pageCmd ) =
+                    Pages.Service.Edit.init (Just id)
+            in
+                ( EditServicePage pageModel, Cmd.map EditServicePageMsg pageCmd )
 
         _ ->
             ( None, Cmd.none )
@@ -104,6 +116,19 @@ update msg ({ graph, simulation } as model) =
                     in
                         { model | subPage = EditConnectionPage pageModel_ }
                             ! [ Cmd.map EditConnectionPageMsg pageCmd ]
+
+                _ ->
+                    model ! []
+
+        EditServicePageMsg pageMsg ->
+            case model.subPage of
+                EditServicePage pageModel ->
+                    let
+                        ( pageModel_, pageCmd ) =
+                            Pages.Service.Edit.update pageMsg pageModel
+                    in
+                        { model | subPage = EditServicePage pageModel_ }
+                            ! [ Cmd.map EditServicePageMsg pageCmd ]
 
                 _ ->
                     model ! []
@@ -165,48 +190,47 @@ update msg ({ graph, simulation } as model) =
         ResultGetConnections (Err err) ->
             { model | connections = Failure err } ! []
 
-        AddService service ->
-            model ! [ Api.addService service ResultAddService ]
-
-        ResultAddService (Ok service) ->
-            let
-                ( services_, cmd ) =
-                    case model.services of
-                        Success data ->
-                            ( Success <| Dict.insert service.id service data, Cmd.none )
-
-                        _ ->
-                            ( model.services, Api.getServices ResultGetServices )
-            in
-                { model | services = services_, lastAlert = Nothing } ! [ cmd, Navigation.back 1 ]
-
-        ResultAddService (Err err) ->
-            let
-                out =
-                    Debug.log "ResultAddService Error" <| toString err
-            in
-                { model | lastAlert = Just Util.oops } ! []
-
-        UpdateCurrentService service ->
-            { model | currentService = Ready service } ! []
-
-        EditService service ->
-            model ! [ Api.updateService service ResultUpdateService ]
-
-        ResultUpdateService (Ok service) ->
-            let
-                services_ =
-                    RemoteData.map (Dict.insert service.id service) model.services
-            in
-                { model | services = services_, lastAlert = Nothing } ! [ Navigation.back 1 ]
-
-        ResultUpdateService (Err err) ->
-            let
-                out =
-                    Debug.log "ResultUpdateService Error" <| toString err
-            in
-                { model | lastAlert = Just Util.oops } ! []
-
+        -- AddService service ->
+        --     model ! [ Api.addService service ResultAddService ]
+        --
+        -- ResultAddService (Ok service) ->
+        --     let
+        --         ( services_, cmd ) =
+        --             case model.services of
+        --                 Success data ->
+        --                     ( Success <| Dict.insert service.id service data, Cmd.none )
+        --
+        --                 _ ->
+        --                     ( model.services, Api.getServices ResultGetServices )
+        --     in
+        --         { model | services = services_, lastAlert = Nothing } ! [ cmd, Navigation.back 1 ]
+        --
+        -- ResultAddService (Err err) ->
+        --     let
+        --         out =
+        --             Debug.log "ResultAddService Error" <| toString err
+        --     in
+        --         { model | lastAlert = Just Util.oops } ! []
+        --
+        -- UpdateCurrentService service ->
+        --     { model | currentService = Ready service } ! []
+        --
+        -- EditService service ->
+        --     model ! [ Api.updateService service ResultUpdateService ]
+        --
+        -- ResultUpdateService (Ok service) ->
+        --     let
+        --         services_ =
+        --             RemoteData.map (Dict.insert service.id service) model.services
+        --     in
+        --         { model | services = services_, lastAlert = Nothing } ! [ Navigation.back 1 ]
+        --
+        -- ResultUpdateService (Err err) ->
+        --     let
+        --         out =
+        --             Debug.log "ResultUpdateService Error" <| toString err
+        --     in
+        --         { model | lastAlert = Just Util.oops } ! []
         RefreshGraph ->
             let
                 ( graph, simulation ) =

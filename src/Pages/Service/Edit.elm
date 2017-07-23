@@ -1,29 +1,92 @@
-module Pages.Service.Edit exposing (view)
+module Pages.Service.Edit exposing (Model, Msg, init, update, view)
 
-import Html exposing (Html, div, text)
-import Html.Attributes exposing (for)
+import Api.Entities exposing (Service, emptyService)
+import Api.Request as Api
 import Bootstrap.Alert as Alert
 import Bootstrap.Button as Button
 import Bootstrap.Form as Form
-import Bootstrap.Grid as Grid
 import Bootstrap.Form.Input as Input
 import Bootstrap.Form.Textarea as Textarea
-import Api.Entities exposing (Service)
-import Validation exposing (isValidStringProp, isValidIdProp)
+import Bootstrap.Grid as Grid
+import Html exposing (Html, div, text)
+import Html.Attributes exposing (for)
+import Http
+import Navigation
+import RemoteData exposing (RemoteData(..), WebData)
+import Routing exposing (Route(..))
+import Validation exposing (isValidIdProp, isValidStringProp)
 
 
-type alias Config msg =
-    { updateMsg : Service -> msg
-    , saveMsg : Service -> msg
-    , alert : Maybe String
+type alias Model =
+    { serviceId : Maybe Int
+    , service : WebData Service
+    , saveAlert : Maybe String
     }
 
 
-view : Config msg -> Service -> Html msg
-view { updateMsg, saveMsg, alert } service =
+type Msg
+    = ResultGetService (Result Http.Error Service)
+    | UpdateService Service
+    | SaveService
+    | ResultSaveService (Result Http.Error Service)
+
+
+init : Maybe Int -> ( Model, Cmd Msg )
+init serviceId =
+    let
+        ( service, serviceCmd ) =
+            case serviceId of
+                Just id ->
+                    ( NotAsked, Api.getService id ResultGetService )
+
+                Nothing ->
+                    ( Success emptyService, Cmd.none )
+    in
+        { serviceId = serviceId
+        , service = service
+        , saveAlert = Nothing
+        }
+            ! [ serviceCmd
+              ]
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        ResultGetService serviceResult ->
+            { model | service = RemoteData.fromResult serviceResult } ! []
+
+        UpdateService service ->
+            { model | service = Success service } ! []
+
+        SaveService ->
+            let
+                service =
+                    RemoteData.withDefault emptyService model.service
+
+                cmd =
+                    case model.serviceId of
+                        Just id ->
+                            Api.updateService service ResultSaveService
+
+                        Nothing ->
+                            Api.addService service ResultSaveService
+            in
+                model ! [ cmd ]
+
+        ResultSaveService (Ok service) ->
+            { model | service = Success service }
+                ! [ Navigation.newUrl <| Routing.getLink Services ]
+
+        ResultSaveService (Err err) ->
+            { model | saveAlert = Just (toString err) } ! []
+
+
+view : Model -> Html Msg
+view model =
     let
         alertMessage =
-            case alert of
+            case model.saveAlert of
                 Just message ->
                     Alert.danger [ text message ]
 
@@ -36,56 +99,64 @@ view { updateMsg, saveMsg, alert } service =
             else
                 [ Form.groupDanger ]
     in
-        Grid.container []
-            [ Form.form []
-                [ alertMessage
-                , Form.group (groupDangerIfNot <| isValidStringProp service.name)
-                    [ Form.label [ for "nam" ] [ text "Name" ]
-                    , Input.text
-                        [ Input.id "nam"
-                        , Input.onInput <| setName updateMsg service
-                        , Input.value service.name
+        case model.service of
+            Success service ->
+                Grid.container []
+                    [ Form.form []
+                        [ alertMessage
+                        , Form.group (groupDangerIfNot <| isValidStringProp service.name)
+                            [ Form.label [ for "nam" ] [ text "Name" ]
+                            , Input.text
+                                [ Input.id "nam"
+                                , Input.onInput (UpdateService << setName service)
+                                , Input.value service.name
+                                ]
+                            , Form.help [] [ text "The service's name" ]
+                            ]
+                        , Form.group (groupDangerIfNot <| isValidStringProp service.hostedOn)
+                            [ Form.label [ for "hon" ] [ text "Hosted on" ]
+                            , Input.text
+                                [ Input.id "hon"
+                                , Input.onInput <| (UpdateService << setHostedOn service)
+                                , Input.value service.hostedOn
+                                ]
+                            , Form.help [] [ text "The server or instance where the service is hosted" ]
+                            ]
+                        , Form.group []
+                            [ Form.label [ for "des" ] [ text "Description" ]
+                            , Textarea.textarea
+                                [ Textarea.id "des"
+                                , Textarea.rows 4
+                                , Textarea.onInput <| (UpdateService << setDescription service)
+                                , Textarea.value service.description
+                                ]
+                            , Form.help [] [ text "Whatever is important" ]
+                            ]
+                        , Button.button [ Button.onClick SaveService, Button.disabled <| not <| isValid service ]
+                            [ text "Save" ]
                         ]
-                    , Form.help [] [ text "The service's name" ]
                     ]
-                , Form.group (groupDangerIfNot <| isValidStringProp service.hostedOn)
-                    [ Form.label [ for "hon" ] [ text "Hosted on" ]
-                    , Input.text
-                        [ Input.id "hon"
-                        , Input.onInput <| setHostedOn updateMsg service
-                        , Input.value service.hostedOn
-                        ]
-                    , Form.help [] [ text "The server or instance where the service is hosted" ]
-                    ]
-                , Form.group []
-                    [ Form.label [ for "des" ] [ text "Description" ]
-                    , Textarea.textarea
-                        [ Textarea.id "des"
-                        , Textarea.rows 4
-                        , Textarea.onInput <| setDescription updateMsg service
-                        , Textarea.value service.description
-                        ]
-                    , Form.help [] [ text "Whatever is important" ]
-                    ]
-                , Button.button [ Button.onClick <| saveMsg service, Button.disabled <| not <| isValid service ]
-                    [ text "Save" ]
-                ]
-            ]
+
+            Failure service ->
+                Grid.container [] [ Alert.danger [ text "Service not found or no connection to server" ] ]
+
+            _ ->
+                Grid.container [] [ Alert.danger [ text "loading.." ] ]
 
 
-setName : ({ b | name : a } -> msg) -> { b | name : d } -> a -> msg
-setName msg service name =
-    msg { service | name = name }
+setName : { b | name : a } -> c -> { b | name : c }
+setName service name =
+    { service | name = name }
 
 
-setHostedOn : ({ b | hostedOn : a } -> msg) -> { b | hostedOn : d } -> a -> msg
-setHostedOn msg service hostedOn =
-    msg { service | hostedOn = hostedOn }
+setHostedOn : { b | hostedOn : a } -> c -> { b | hostedOn : c }
+setHostedOn service hostedOn =
+    { service | hostedOn = hostedOn }
 
 
-setDescription : ({ b | description : a } -> msg) -> { b | description : d } -> a -> msg
-setDescription msg service description =
-    msg { service | description = description }
+setDescription : { b | description : a } -> c -> { b | description : c }
+setDescription service description =
+    { service | description = description }
 
 
 isValid : { a | hostedOn : String, name : String } -> Bool
