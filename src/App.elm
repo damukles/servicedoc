@@ -8,12 +8,13 @@ import Dict exposing (Dict)
 import Graph exposing (Edge, Graph, Node, NodeContext, NodeId)
 import Navigation exposing (Location)
 import Pages.Connection
+import Pages.Connection.Edit
 import Pages.Graph
 import Pages.Service
 import RemoteData exposing (RemoteData(..), WebData)
 import Routing exposing (Route(..))
 import Types exposing (..)
-import Util exposing (emptyService, emptyConnection, findById, editableById)
+import Util exposing (emptyConnection, emptyService, findById)
 import Visualization.Force as Force exposing (State)
 
 
@@ -23,8 +24,11 @@ init location =
         ( navbarState, navbarCmd ) =
             Navbar.initialState NavbarMsg
 
-        ( currentLocation, currentService, currentConnection ) =
-            parseAndPrepareRoute NotAsked NotAsked location
+        currentLocation =
+            Routing.parse location
+
+        ( page, cmd ) =
+            pageFromRoute currentLocation
     in
         { currentLocation = currentLocation
         , history = []
@@ -33,8 +37,8 @@ init location =
         , connectionsViewState = Pages.Connection.init
         , services = NotAsked
         , connections = NotAsked
-        , currentService = currentService
-        , currentConnection = currentConnection
+        , currentService = NoIntention
+        , subPage = page
         , lastAlert = Nothing
         , graph = Nothing
         , simulation = Nothing
@@ -42,12 +46,29 @@ init location =
             ! [ navbarCmd
               , Api.getServices ResultGetServices
               , Api.getConnections ResultGetConnections
+              , cmd
               ]
 
 
-oops : String
-oops =
-    "Oops, something went wrong there."
+pageFromRoute : Maybe Route -> ( Page, Cmd Msg )
+pageFromRoute route =
+    case route of
+        Just ConnectionsAdd ->
+            let
+                ( pageModel, pageCmd ) =
+                    Pages.Connection.Edit.init Nothing
+            in
+                ( EditConnectionPage pageModel, Cmd.map EditConnectionPageMsg pageCmd )
+
+        Just (ConnectionsEdit id) ->
+            let
+                ( pageModel, pageCmd ) =
+                    Pages.Connection.Edit.init (Just id)
+            in
+                ( EditConnectionPage pageModel, Cmd.map EditConnectionPageMsg pageCmd )
+
+        _ ->
+            ( None, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -58,19 +79,34 @@ update msg ({ graph, simulation } as model) =
 
         UrlChange location ->
             let
-                ( currentLocation, currentService, currentConnection ) =
-                    parseAndPrepareRoute model.services model.connections location
+                currentLocation =
+                    Routing.parse location
+
+                ( page, cmd ) =
+                    pageFromRoute currentLocation
             in
                 { model
                     | history = location :: model.history
                     , currentLocation = currentLocation
-                    , currentService = currentService
-                    , currentConnection = currentConnection
+                    , subPage = page
                 }
-                    ! []
+                    ! [ cmd ]
 
         NavbarMsg state ->
             { model | navbar = state } ! []
+
+        EditConnectionPageMsg pageMsg ->
+            case model.subPage of
+                EditConnectionPage pageModel ->
+                    let
+                        ( pageModel_, pageCmd ) =
+                            Pages.Connection.Edit.update pageMsg pageModel
+                    in
+                        { model | subPage = EditConnectionPage pageModel_ }
+                            ! [ Cmd.map EditConnectionPageMsg pageCmd ]
+
+                _ ->
+                    model ! []
 
         ServicesViewMsg state ->
             { model | servicesViewState = state } ! []
@@ -149,7 +185,7 @@ update msg ({ graph, simulation } as model) =
                 out =
                     Debug.log "ResultAddService Error" <| toString err
             in
-                { model | lastAlert = Just oops } ! []
+                { model | lastAlert = Just Util.oops } ! []
 
         UpdateCurrentService service ->
             { model | currentService = Ready service } ! []
@@ -169,49 +205,7 @@ update msg ({ graph, simulation } as model) =
                 out =
                     Debug.log "ResultUpdateService Error" <| toString err
             in
-                { model | lastAlert = Just oops } ! []
-
-        AddConnection connection ->
-            model ! [ Api.addConnection connection ResultAddConnection ]
-
-        ResultAddConnection (Ok connection) ->
-            let
-                ( connections_, cmd ) =
-                    case model.connections of
-                        Success data ->
-                            ( Success <| Dict.insert connection.id connection data, Cmd.none )
-
-                        _ ->
-                            ( model.connections, Api.getConnections ResultGetConnections )
-            in
-                { model | connections = connections_, lastAlert = Nothing } ! [ cmd, Navigation.back 1 ]
-
-        ResultAddConnection (Err err) ->
-            let
-                out =
-                    Debug.log "ResultAddConnection Error" <| toString err
-            in
-                { model | lastAlert = Just oops } ! []
-
-        UpdateCurrentConnection connection ->
-            { model | currentConnection = Ready connection } ! []
-
-        EditConnection connection ->
-            model ! [ Api.updateConnection connection ResultUpdateConnection ]
-
-        ResultUpdateConnection (Ok connection) ->
-            let
-                connections_ =
-                    RemoteData.map (Dict.insert connection.id connection) model.connections
-            in
-                { model | connections = connections_, lastAlert = Nothing } ! [ Navigation.back 1 ]
-
-        ResultUpdateConnection (Err err) ->
-            let
-                out =
-                    Debug.log "ResultUpdateConnection Error" <| toString err
-            in
-                { model | lastAlert = Just oops } ! []
+                { model | lastAlert = Just Util.oops } ! []
 
         RefreshGraph ->
             let
@@ -223,32 +217,6 @@ update msg ({ graph, simulation } as model) =
                     , simulation = simulation
                 }
                     ! []
-
-
-parseAndPrepareRoute : WebData (Dict Int Service) -> WebData (Dict Int Connection) -> Location -> ( Maybe Route, Editable Int Service, Editable Int Connection )
-parseAndPrepareRoute services connections location =
-    let
-        currentLocation =
-            Routing.parse location
-
-        ( currentService, currentConnection ) =
-            case currentLocation of
-                Just ServicesAdd ->
-                    ( Ready emptyService, NoIntention )
-
-                Just (ServicesEdit id) ->
-                    ( editableById id services, NoIntention )
-
-                Just ConnectionsAdd ->
-                    ( NoIntention, Ready emptyConnection )
-
-                Just (ConnectionsEdit id) ->
-                    ( NoIntention, editableById id connections )
-
-                _ ->
-                    ( NoIntention, NoIntention )
-    in
-        ( currentLocation, currentService, currentConnection )
 
 
 updateGraphAndSim : WebData (Dict Int Service) -> WebData (Dict Int Connection) -> ( Maybe (Graph Entity ()), Maybe (State Int) )

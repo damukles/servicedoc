@@ -88,37 +88,49 @@ content model =
             connectionsView (\_ -> True) model
 
         Just ConnectionsAdd ->
-            case model.currentConnection of
-                Ready connection ->
-                    let
-                        config =
-                            { updateMsg = UpdateCurrentConnection
-                            , saveMsg = AddConnection
-                            , alert = model.lastAlert
-                            }
-
-                        services =
-                            valuesFromRemoteDataDict model.services
-                    in
-                        Pages.Connection.Edit.view config services connection
+            case model.subPage of
+                EditConnectionPage pageModel ->
+                    Html.map EditConnectionPageMsg <| Pages.Connection.Edit.view pageModel
 
                 _ ->
                     Pages.Error.view "You found a bug. Please report."
 
+        -- case model.currentConnection of
+        --     Ready connection ->
+        --         let
+        --             config =
+        --                 { updateMsg = UpdateCurrentConnection
+        --                 , saveMsg = AddConnection
+        --                 , alert = model.lastAlert
+        --                 }
+        --
+        --             services =
+        --                 valuesFromRemoteDataDict model.services
+        --         in
+        --             Pages.Connection.Edit.view config services connection
+        --
+        --     _ ->
+        --         Pages.Error.view "You found a bug. Please report."
         Just (ConnectionsEdit id) ->
-            case model.currentConnection of
-                NotReady id ->
-                    connectionEditView model <| Maybe.withDefault emptyConnection <| findById id model.connections
+            case model.subPage of
+                EditConnectionPage pageModel ->
+                    Html.map EditConnectionPageMsg <| Pages.Connection.Edit.view pageModel
 
-                Ready connection ->
-                    connectionEditView model connection
-
-                NotFound ->
-                    Pages.Error.view "Connection not found."
-
-                NoIntention ->
+                _ ->
                     Pages.Error.view "You found a bug. Please report."
 
+        -- case model.currentConnection of
+        --     NotReady id ->
+        --         connectionEditView model <| Maybe.withDefault emptyConnection <| findById id model.connections
+        --
+        --     Ready connection ->
+        --         connectionEditView model connection
+        --
+        --     NotFound ->
+        --         Pages.Error.view "Connection not found."
+        --
+        --     NoIntention ->
+        --         Pages.Error.view "You found a bug. Please report."
         Just Graph ->
             Pages.Graph.view model
 
@@ -138,22 +150,23 @@ serviceEditView model service =
         Pages.Service.Edit.view config service
 
 
-connectionEditView :
-    { a | lastAlert : Maybe String, services : RemoteData e (Dict.Dict comparable Api.Entities.Service) }
-    -> Connection
-    -> Html Msg
-connectionEditView model connection =
-    let
-        config =
-            { updateMsg = UpdateCurrentConnection
-            , saveMsg = EditConnection
-            , alert = model.lastAlert
-            }
 
-        services =
-            valuesFromRemoteDataDict model.services
-    in
-        Pages.Connection.Edit.view config services connection
+-- connectionEditView :
+--     { a | lastAlert : Maybe String, services : RemoteData e (Dict.Dict comparable Api.Entities.Service) }
+--     -> Connection
+--     -> Html Msg
+-- connectionEditView model connection =
+--     let
+--         config =
+--             { updateMsg = UpdateCurrentConnection
+--             , saveMsg = EditConnection
+--             , alert = model.lastAlert
+--             }
+--
+--         services =
+--             valuesFromRemoteDataDict model.services
+--     in
+--         Pages.Connection.Edit.view config services connection
 
 
 connectionsView : (Connection -> Bool) -> Model -> Html Msg

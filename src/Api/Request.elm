@@ -26,6 +26,12 @@ getConnections msg =
         |> Http.send msg
 
 
+getConnection : Int -> (Result Http.Error Connection -> msg) -> Cmd msg
+getConnection id msg =
+    Http.get (connectionsUrl ++ toString id) decodeConnection
+        |> Http.send msg
+
+
 addConnection : Connection -> (Result Http.Error Connection -> msg) -> Cmd msg
 addConnection connection msg =
     Http.post connectionsUrl (Http.jsonBody <| encodeConnection False connection) decodeConnection
@@ -49,6 +55,12 @@ updateConnection connection msg =
 getServices : (Result Http.Error (List Service) -> msg) -> Cmd msg
 getServices msg =
     Http.get servicesUrl (Json.Decode.list decodeService)
+        |> Http.send msg
+
+
+getService : Int -> (Result Http.Error Service -> msg) -> Cmd msg
+getService id msg =
+    Http.get (servicesUrl ++ toString id) decodeService
         |> Http.send msg
 
 

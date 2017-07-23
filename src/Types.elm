@@ -11,6 +11,7 @@ import Visualization.Force as Force
 import Api.Entities exposing (Service, Connection)
 import Pages.Service
 import Pages.Connection
+import Pages.Connection.Edit
 import Routing exposing (Route)
 
 
@@ -19,6 +20,7 @@ type Msg
     | NewUrl String
     | UrlChange Location
     | NavbarMsg Navbar.State
+    | EditConnectionPageMsg Pages.Connection.Edit.Msg
     | ServicesViewMsg Pages.Service.State
     | ConnectionsViewMsg Pages.Connection.State
     | ResultGetServices (Result Http.Error (List Service))
@@ -28,11 +30,6 @@ type Msg
     | UpdateCurrentService Service
     | EditService Service
     | ResultUpdateService (Result Http.Error Service)
-    | AddConnection Connection
-    | ResultAddConnection (Result Http.Error Connection)
-    | EditConnection Connection
-    | ResultUpdateConnection (Result Http.Error Connection)
-    | UpdateCurrentConnection Connection
     | RefreshGraph
 
 
@@ -43,13 +40,18 @@ type alias Model =
     , servicesViewState : Pages.Service.State
     , connectionsViewState : Pages.Connection.State
     , currentService : Editable Int Service
-    , currentConnection : Editable Int Connection
+    , subPage : Page
     , lastAlert : Maybe String
     , services : WebData (Dict Int Service)
     , connections : WebData (Dict Int Connection)
     , graph : Maybe (Graph Entity ())
     , simulation : Maybe (Force.State NodeId)
     }
+
+
+type Page
+    = None
+    | EditConnectionPage Pages.Connection.Edit.Model
 
 
 type Editable i a
