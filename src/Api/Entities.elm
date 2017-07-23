@@ -7,9 +7,7 @@ import Json.Encode
 
 type alias Service =
     { id : Int
-    , name :
-        String
-        -- normalize
+    , name : String
     , hostedOn : String
     , description : String
     }
@@ -19,13 +17,9 @@ type alias Connection =
     { id : Int
     , name : String
     , from : Int
-    , to :
-        Int
-        -- normalize
+    , to : Int
     , connectionType : String
-    , connectionDetails :
-        String
-        -- normalize
+    , connectionDetails : String
     , authentication : String
     , description : String
     }

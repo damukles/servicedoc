@@ -1,21 +1,14 @@
 module App exposing (init, update, subscriptions)
 
-import AnimationFrame
-import Api.Entities exposing (Connection, Service)
-import Api.Request as Api
 import Bootstrap.Navbar as Navbar
-import Dict exposing (Dict)
-import Graph exposing (Edge, Graph, Node, NodeContext, NodeId)
 import Navigation exposing (Location)
 import Pages.Connection
 import Pages.Connection.Edit
 import Pages.Graph
 import Pages.Service
 import Pages.Service.Edit
-import RemoteData exposing (RemoteData(..), WebData)
 import Routing exposing (Route(..))
 import Types exposing (..)
-import Visualization.Force as Force exposing (State)
 
 
 init : Location -> ( Model, Cmd Msg )
@@ -27,30 +20,43 @@ init location =
         currentLocation =
             Routing.parse location
 
-        ( page, cmd ) =
+        ( page, pageCmd ) =
             pageFromRoute currentLocation
     in
         { currentLocation = currentLocation
         , history = []
         , navbar = navbarState
-        , servicesViewState = Pages.Service.init
-        , connectionsViewState = Pages.Connection.init
-        , services = NotAsked
-        , connections = NotAsked
         , subPage = page
-        , graph = Nothing
-        , simulation = Nothing
         }
             ! [ navbarCmd
-              , Api.getServices ResultGetServices
-              , Api.getConnections ResultGetConnections
-              , cmd
+              , pageCmd
               ]
 
 
 pageFromRoute : Maybe Route -> ( Page, Cmd Msg )
 pageFromRoute route =
     case route of
+        Just Services ->
+            let
+                ( pageModel, pageCmd ) =
+                    Pages.Service.init
+            in
+                ( ServicesPage pageModel, Cmd.map ServicesPageMsg pageCmd )
+
+        Just Connections ->
+            let
+                ( pageModel, pageCmd ) =
+                    Pages.Connection.init Nothing
+            in
+                ( ConnectionsPage pageModel, Cmd.map ConnectionsPageMsg pageCmd )
+
+        Just (ServicesConnections id) ->
+            let
+                ( pageModel, pageCmd ) =
+                    Pages.Connection.init (Just id)
+            in
+                ( ConnectionsPage pageModel, Cmd.map ConnectionsPageMsg pageCmd )
+
         Just ConnectionsAdd ->
             let
                 ( pageModel, pageCmd ) =
@@ -79,12 +85,24 @@ pageFromRoute route =
             in
                 ( EditServicePage pageModel, Cmd.map EditServicePageMsg pageCmd )
 
-        _ ->
-            ( None, Cmd.none )
+        Just Graph ->
+            initGraphPage
+
+        Nothing ->
+            initGraphPage
+
+
+initGraphPage : ( Page, Cmd Msg )
+initGraphPage =
+    let
+        ( pageModel, pageCmd ) =
+            Pages.Graph.init
+    in
+        ( GraphPage pageModel, Cmd.map GraphPageMsg pageCmd )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg ({ graph, simulation } as model) =
+update msg model =
     case msg of
         NewUrl url ->
             model ! [ Navigation.newUrl url ]
@@ -106,6 +124,32 @@ update msg ({ graph, simulation } as model) =
 
         NavbarMsg state ->
             { model | navbar = state } ! []
+
+        ServicesPageMsg pageMsg ->
+            case model.subPage of
+                ServicesPage pageModel ->
+                    let
+                        ( pageModel_, pageCmd ) =
+                            Pages.Service.update pageMsg pageModel
+                    in
+                        { model | subPage = ServicesPage pageModel_ }
+                            ! [ Cmd.map ServicesPageMsg pageCmd ]
+
+                _ ->
+                    model ! []
+
+        ConnectionsPageMsg pageMsg ->
+            case model.subPage of
+                ConnectionsPage pageModel ->
+                    let
+                        ( pageModel_, pageCmd ) =
+                            Pages.Connection.update pageMsg pageModel
+                    in
+                        { model | subPage = ConnectionsPage pageModel_ }
+                            ! [ Cmd.map ConnectionsPageMsg pageCmd ]
+
+                _ ->
+                    model ! []
 
         EditConnectionPageMsg pageMsg ->
             case model.subPage of
@@ -133,144 +177,32 @@ update msg ({ graph, simulation } as model) =
                 _ ->
                     model ! []
 
-        ServicesViewMsg state ->
-            { model | servicesViewState = state } ! []
-
-        ConnectionsViewMsg state ->
-            { model | connectionsViewState = state } ! []
-
-        Tick t ->
-            case ( graph, simulation ) of
-                ( Just realGraph, Just realSimulation ) ->
+        GraphPageMsg pageMsg ->
+            case model.subPage of
+                GraphPage pageModel ->
                     let
-                        ( simulation_, list ) =
-                            Force.tick realSimulation <| List.map .label <| Graph.nodes realGraph
-
-                        graph_ =
-                            (Pages.Graph.updateGraphWithList realGraph list)
+                        ( pageModel_, pageCmd ) =
+                            Pages.Graph.update pageMsg pageModel
                     in
-                        { model | graph = Just graph_, simulation = Just simulation_ } ! []
+                        { model | subPage = GraphPage pageModel_ }
+                            ! [ Cmd.map GraphPageMsg pageCmd ]
 
                 _ ->
                     model ! []
 
-        ResultGetServices (Ok services) ->
-            let
-                services_ =
-                    Success <| Dict.fromList <| List.map (\x -> ( x.id, x )) services
-
-                ( graph_, simulation_ ) =
-                    updateGraphAndSim services_ model.connections
-            in
-                { model
-                    | services = services_
-                    , graph = graph_
-                    , simulation = simulation_
-                }
-                    ! []
-
-        ResultGetServices (Err err) ->
-            { model | services = Failure err } ! []
-
-        ResultGetConnections (Ok connections) ->
-            let
-                connections_ =
-                    Success <| Dict.fromList <| List.map (\x -> ( x.id, x )) connections
-
-                ( graph_, simulation_ ) =
-                    updateGraphAndSim model.services connections_
-            in
-                { model
-                    | connections = connections_
-                    , graph = graph_
-                    , simulation = simulation_
-                }
-                    ! []
-
-        ResultGetConnections (Err err) ->
-            { model | connections = Failure err } ! []
-
-        -- AddService service ->
-        --     model ! [ Api.addService service ResultAddService ]
-        --
-        -- ResultAddService (Ok service) ->
-        --     let
-        --         ( services_, cmd ) =
-        --             case model.services of
-        --                 Success data ->
-        --                     ( Success <| Dict.insert service.id service data, Cmd.none )
-        --
-        --                 _ ->
-        --                     ( model.services, Api.getServices ResultGetServices )
-        --     in
-        --         { model | services = services_, lastAlert = Nothing } ! [ cmd, Navigation.back 1 ]
-        --
-        -- ResultAddService (Err err) ->
-        --     let
-        --         out =
-        --             Debug.log "ResultAddService Error" <| toString err
-        --     in
-        --         { model | lastAlert = Just Util.oops } ! []
-        --
-        -- UpdateCurrentService service ->
-        --     { model | currentService = Ready service } ! []
-        --
-        -- EditService service ->
-        --     model ! [ Api.updateService service ResultUpdateService ]
-        --
-        -- ResultUpdateService (Ok service) ->
-        --     let
-        --         services_ =
-        --             RemoteData.map (Dict.insert service.id service) model.services
-        --     in
-        --         { model | services = services_, lastAlert = Nothing } ! [ Navigation.back 1 ]
-        --
-        -- ResultUpdateService (Err err) ->
-        --     let
-        --         out =
-        --             Debug.log "ResultUpdateService Error" <| toString err
-        --     in
-        --         { model | lastAlert = Just Util.oops } ! []
-        RefreshGraph ->
-            let
-                ( graph, simulation ) =
-                    updateGraphAndSim model.services model.connections
-            in
-                { model
-                    | graph = graph
-                    , simulation = simulation
-                }
-                    ! []
-
-
-updateGraphAndSim : WebData (Dict Int Service) -> WebData (Dict Int Connection) -> ( Maybe (Graph Entity ()), Maybe (State Int) )
-updateGraphAndSim rdServices rdConnections =
-    case ( rdServices, rdConnections ) of
-        ( Success services, Success connections ) ->
-            let
-                graph =
-                    Pages.Graph.makeGraph (Dict.values services) (Dict.values connections)
-
-                simulation =
-                    Pages.Graph.makeSimulation graph
-            in
-                ( Just graph, Just simulation )
-
-        _ ->
-            ( Nothing, Nothing )
-
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.batch <|
-        (case model.simulation of
-            Just simulation ->
-                if Force.isCompleted simulation then
-                    Sub.none
-                else
-                    AnimationFrame.times Tick
+    let
+        graphSub =
+            case model.subPage of
+                GraphPage subModel ->
+                    Sub.map GraphPageMsg <| Pages.Graph.subscriptions subModel
 
-            Nothing ->
-                Sub.none
-        )
-            :: [ Navbar.subscriptions model.navbar NavbarMsg ]
+                _ ->
+                    Sub.none
+    in
+        Sub.batch
+            [ Navbar.subscriptions model.navbar NavbarMsg
+            , graphSub
+            ]

@@ -61,8 +61,3 @@ getLink route =
 
         Graph ->
             "#/graph"
-
-
-defaultRoute : Route
-defaultRoute =
-    Services

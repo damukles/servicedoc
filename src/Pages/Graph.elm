@@ -1,13 +1,146 @@
-module Pages.Graph exposing (view, makeGraph, makeSimulation, updateGraphWithList)
+module Pages.Graph exposing (Model, Msg, init, update, subscriptions, view)
 
+import AnimationFrame
+import Api.Entities exposing (Connection, Service)
+import Api.Request as Api
 import Bootstrap.Button as Button
 import Bootstrap.Grid as Grid
-import Html exposing (Html, div)
+import Dict exposing (Dict)
 import Graph exposing (Edge, Graph, Node, NodeContext, NodeId)
-import Svg exposing (Svg, svg, line, text, g, circle, text_)
-import Svg.Attributes exposing (r, fill, stroke, strokeWidth, cx, cy, x, y, x1, x2, y1, y2, width, height, class, textAnchor)
+import Html exposing (Html, div)
+import Http
+import RemoteData exposing (RemoteData(..), WebData)
+import Svg exposing (Svg, circle, g, line, svg, text, text_)
+import Svg.Attributes exposing (class, cx, cy, fill, height, r, stroke, strokeWidth, textAnchor, width, x, x1, x2, y, y1, y2)
+import Time exposing (Time)
 import Visualization.Force as Force exposing (State)
-import Types exposing (..)
+
+
+type alias Model =
+    { graph : Maybe (Graph Entity ())
+    , simulation : Maybe (Force.State NodeId)
+    , connections : WebData (Dict Int Connection)
+    , services : WebData (Dict Int Service)
+    }
+
+
+type Msg
+    = Tick Time
+    | RefreshGraph
+    | ResultGetConnections (Result Http.Error (List Connection))
+    | ResultGetServices (Result Http.Error (List Service))
+
+
+type alias Entity =
+    Force.Entity NodeId { value : String }
+
+
+init : ( Model, Cmd Msg )
+init =
+    { graph = Nothing
+    , simulation = Nothing
+    , connections = NotAsked
+    , services = NotAsked
+    }
+        ! [ Api.getConnections ResultGetConnections
+          , Api.getServices ResultGetServices
+          ]
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg ({ graph, simulation } as model) =
+    case msg of
+        Tick t ->
+            case ( graph, simulation ) of
+                ( Just realGraph, Just realSimulation ) ->
+                    let
+                        ( simulation_, list ) =
+                            Force.tick realSimulation <| List.map .label <| Graph.nodes realGraph
+
+                        graph_ =
+                            (updateGraphWithList realGraph list)
+                    in
+                        { model | graph = Just graph_, simulation = Just simulation_ } ! []
+
+                _ ->
+                    model ! []
+
+        RefreshGraph ->
+            let
+                ( graph, simulation ) =
+                    updateGraphAndSim model.services model.connections
+            in
+                { model
+                    | graph = graph
+                    , simulation = simulation
+                }
+                    ! []
+
+        ResultGetServices (Ok services) ->
+            let
+                services_ =
+                    Success <| Dict.fromList <| List.map (\x -> ( x.id, x )) services
+
+                ( graph_, simulation_ ) =
+                    updateGraphAndSim services_ model.connections
+            in
+                { model
+                    | services = services_
+                    , graph = graph_
+                    , simulation = simulation_
+                }
+                    ! []
+
+        ResultGetServices (Err err) ->
+            { model | services = Failure err } ! []
+
+        ResultGetConnections (Ok connections) ->
+            let
+                connections_ =
+                    Success <| Dict.fromList <| List.map (\x -> ( x.id, x )) connections
+
+                ( graph_, simulation_ ) =
+                    updateGraphAndSim model.services connections_
+            in
+                { model
+                    | connections = connections_
+                    , graph = graph_
+                    , simulation = simulation_
+                }
+                    ! []
+
+        ResultGetConnections (Err err) ->
+            { model | connections = Failure err } ! []
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    case model.simulation of
+        Just simulation ->
+            if Force.isCompleted simulation then
+                Sub.none
+            else
+                AnimationFrame.times Tick
+
+        Nothing ->
+            Sub.none
+
+
+updateGraphAndSim : WebData (Dict Int Service) -> WebData (Dict Int Connection) -> ( Maybe (Graph Entity ()), Maybe (State Int) )
+updateGraphAndSim rdServices rdConnections =
+    case ( rdServices, rdConnections ) of
+        ( Success services, Success connections ) ->
+            let
+                graph =
+                    makeGraph (Dict.values services) (Dict.values connections)
+
+                simulation =
+                    makeSimulation graph
+            in
+                ( Just graph, Just simulation )
+
+        _ ->
+            ( Nothing, Nothing )
 
 
 screenWidth : Float
