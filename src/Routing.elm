@@ -31,7 +31,6 @@ route =
         , Url.map Connections <| Url.s "connections"
         , Url.map ConnectionsAdd <| Url.s "connections" </> (Url.s "add")
         , Url.map ConnectionsEdit <| Url.s "connections" </> Url.int
-        , Url.map Graph <| Url.s "graph"
         ]
 
 
@@ -60,4 +59,4 @@ getLink route =
             "#/connections/" ++ toString id
 
         Graph ->
-            "#/graph"
+            "#/"

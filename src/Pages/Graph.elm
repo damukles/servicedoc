@@ -3,7 +3,6 @@ module Pages.Graph exposing (Model, Msg, init, update, subscriptions, view)
 import AnimationFrame
 import Api.Entities exposing (Connection, Service)
 import Api.Request as Api
-import Bootstrap.Button as Button
 import Bootstrap.Grid as Grid
 import Dict exposing (Dict)
 import Graph exposing (Edge, Graph, Node, NodeContext, NodeId)
@@ -26,7 +25,6 @@ type alias Model =
 
 type Msg
     = Tick Time
-    | RefreshGraph
     | ResultGetConnections (Result Http.Error (List Connection))
     | ResultGetServices (Result Http.Error (List Service))
 
@@ -64,17 +62,6 @@ update msg ({ graph, simulation } as model) =
 
                 _ ->
                     model ! []
-
-        RefreshGraph ->
-            let
-                ( graph, simulation ) =
-                    updateGraphAndSim model.services model.connections
-            in
-                { model
-                    | graph = graph
-                    , simulation = simulation
-                }
-                    ! []
 
         ResultGetServices (Ok services) ->
             let
@@ -260,14 +247,5 @@ view model =
                     div [] [ text "loading.." ]
     in
         Grid.container []
-            [ Grid.row []
-                [ Grid.col []
-                    [ Button.button [ Button.onClick RefreshGraph ] [ text "Refresh" ]
-                    ]
-                ]
-            , Grid.row []
-                [ Grid.col []
-                    [ svgGraph
-                    ]
-                ]
+            [ svgGraph
             ]

@@ -66,7 +66,12 @@ view model =
             [ Grid.row []
                 [ Grid.col [] [ Button.linkButton [ Button.attrs [ href <| Routing.getLink ServicesAdd ] ] [ text "Add" ] ]
                 , Grid.col []
-                    [ Input.text [ Input.placeholder "Search", Input.onInput SetTableQuery ] ]
+                    [ Input.text
+                        [ Input.placeholder "Search"
+                        , Input.value model.tableQuery
+                        , Input.onInput SetTableQuery
+                        ]
+                    ]
                 ]
             , Grid.row [ Row.attrs [ class "spacer-12" ] ]
                 [ Grid.col [ Col.md12 ]

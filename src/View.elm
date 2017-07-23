@@ -29,7 +29,6 @@ navbar model =
         |> Navbar.items
             [ Navbar.itemLink [ href <| Routing.getLink Services ] [ text "Services" ]
             , Navbar.itemLink [ href <| Routing.getLink Connections ] [ text "Connections" ]
-            , Navbar.itemLink [ href <| Routing.getLink Graph ] [ text "Graph" ]
             ]
         |> Navbar.view model.navbar
 

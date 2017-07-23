@@ -21,7 +21,7 @@ init location =
             Routing.parse location
 
         ( page, pageCmd ) =
-            pageFromRoute currentLocation
+            pageFromRoute currentLocation Nothing
     in
         { currentLocation = currentLocation
         , history = []
@@ -33,8 +33,8 @@ init location =
               ]
 
 
-pageFromRoute : Maybe Route -> ( Page, Cmd Msg )
-pageFromRoute route =
+pageFromRoute : Maybe Route -> Maybe Route -> ( Page, Cmd Msg )
+pageFromRoute route lastRoute =
     case route of
         Just Services ->
             let
@@ -58,18 +58,10 @@ pageFromRoute route =
                 ( ConnectionsPage pageModel, Cmd.map ConnectionsPageMsg pageCmd )
 
         Just ConnectionsAdd ->
-            let
-                ( pageModel, pageCmd ) =
-                    Pages.Connection.Edit.init Nothing
-            in
-                ( EditConnectionPage pageModel, Cmd.map EditConnectionPageMsg pageCmd )
+            connectionsEditPage Nothing lastRoute
 
         Just (ConnectionsEdit id) ->
-            let
-                ( pageModel, pageCmd ) =
-                    Pages.Connection.Edit.init (Just id)
-            in
-                ( EditConnectionPage pageModel, Cmd.map EditConnectionPageMsg pageCmd )
+            connectionsEditPage (Just id) lastRoute
 
         Just ServicesAdd ->
             let
@@ -86,14 +78,31 @@ pageFromRoute route =
                 ( EditServicePage pageModel, Cmd.map EditServicePageMsg pageCmd )
 
         Just Graph ->
-            initGraphPage
+            graphPage
 
         Nothing ->
-            initGraphPage
+            graphPage
 
 
-initGraphPage : ( Page, Cmd Msg )
-initGraphPage =
+connectionsEditPage : Maybe Int -> Maybe Route -> ( Page, Cmd Msg )
+connectionsEditPage id route =
+    let
+        routeBack =
+            case route of
+                Just (ServicesConnections id) ->
+                    ServicesConnections id
+
+                _ ->
+                    Connections
+
+        ( pageModel, pageCmd ) =
+            Pages.Connection.Edit.init id routeBack
+    in
+        ( EditConnectionPage pageModel, Cmd.map EditConnectionPageMsg pageCmd )
+
+
+graphPage : ( Page, Cmd Msg )
+graphPage =
     let
         ( pageModel, pageCmd ) =
             Pages.Graph.init
@@ -113,7 +122,7 @@ update msg model =
                     Routing.parse location
 
                 ( page, cmd ) =
-                    pageFromRoute currentLocation
+                    pageFromRoute currentLocation model.currentLocation
             in
                 { model
                     | history = location :: model.history

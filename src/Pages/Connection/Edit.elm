@@ -20,6 +20,7 @@ import Validation exposing (isValidIdProp, isValidStringProp)
 
 type alias Model =
     { connectionId : Maybe Int
+    , routeBack : Route
     , connection : WebData Connection
     , services : WebData (List Service)
     , saveAlert : Maybe String
@@ -34,8 +35,8 @@ type Msg
     | ResultSaveConnection (Result Http.Error Connection)
 
 
-init : Maybe Int -> ( Model, Cmd Msg )
-init connectionId =
+init : Maybe Int -> Route -> ( Model, Cmd Msg )
+init connectionId routeBack =
     let
         ( connection, connectionCmd ) =
             case connectionId of
@@ -46,6 +47,7 @@ init connectionId =
                     ( Success emptyConnection, Cmd.none )
     in
         { connectionId = connectionId
+        , routeBack = routeBack
         , connection = connection
         , services = NotAsked
         , saveAlert = Nothing
@@ -84,7 +86,7 @@ update msg model =
 
         ResultSaveConnection (Ok connection) ->
             { model | connection = Success connection }
-                ! [ Navigation.newUrl <| Routing.getLink Connections ]
+                ! [ Navigation.newUrl <| Routing.getLink model.routeBack ]
 
         ResultSaveConnection (Err err) ->
             { model | saveAlert = Just (toString err) } ! []
