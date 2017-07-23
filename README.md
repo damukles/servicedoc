@@ -1,5 +1,3 @@
-This project is bootstrapped with [Create Elm App](https://github.com/halfzebra/create-elm-app).
-
 # ServiceDoc
 
 Document services and their dependencies and show them in a visual graph.
@@ -8,6 +6,7 @@ Document services and their dependencies and show them in a visual graph.
 
 ```sh
 npm install -g json-server
+npm install -g create-elm-app
 ```
 
 In the project folder:
@@ -17,10 +16,17 @@ elm package install
 ```
 
 
-## Run dev env
+## Run dev
+
+In the data folder:
 
 ```sh
-./data/server.cmd
+./server.cmd
+```
+
+In the project folder:
+
+```sh
 elm-app start
 ```
 
