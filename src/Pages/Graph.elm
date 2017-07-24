@@ -3,15 +3,18 @@ module Pages.Graph exposing (Model, Msg, init, update, subscriptions, view)
 import AnimationFrame
 import Api.Entities exposing (Connection, Service)
 import Api.Request as Api
-import Bootstrap.Grid as Grid
 import Bootstrap.Button as Button
+import Bootstrap.Grid as Grid
 import Dict exposing (Dict)
 import Graph exposing (Edge, Graph, Node, NodeContext, NodeId)
 import Html exposing (Html, div)
 import Http
+import Navigation
 import RemoteData exposing (RemoteData(..), WebData)
+import Routing exposing (Route(..))
 import Svg exposing (Svg, circle, g, line, svg, text, text_)
 import Svg.Attributes exposing (class, cx, cy, fill, height, r, stroke, strokeWidth, textAnchor, width, x, x1, x2, y, y1, y2)
+import Svg.Events exposing (onClick)
 import Time exposing (Time)
 import Visualization.Force as Force exposing (State)
 
@@ -20,6 +23,7 @@ type alias Model =
     { graph : Maybe (Graph Entity ())
     , simulation : Maybe (Force.State NodeId)
     , showLabels : Bool
+    , serviceId : Maybe Int
     , connections : WebData (Dict Int Connection)
     , services : WebData (Dict Int Service)
     }
@@ -28,6 +32,7 @@ type alias Model =
 type Msg
     = Tick Time
     | ToggleLabels
+    | ShowGraphOf Int
     | ResultGetConnections (Result Http.Error (List Connection))
     | ResultGetServices (Result Http.Error (List Service))
 
@@ -36,11 +41,12 @@ type alias Entity =
     Force.Entity NodeId { value : String }
 
 
-init : ( Model, Cmd Msg )
-init =
+init : Maybe Int -> ( Model, Cmd Msg )
+init serviceId =
     { graph = Nothing
     , simulation = Nothing
     , showLabels = True
+    , serviceId = serviceId
     , connections = NotAsked
     , services = NotAsked
     }
@@ -70,13 +76,16 @@ update msg ({ graph, simulation } as model) =
         ToggleLabels ->
             { model | showLabels = not model.showLabels } ! []
 
+        ShowGraphOf id ->
+            model ! [ Navigation.newUrl <| Routing.getLink (GraphOf id) ]
+
         ResultGetServices (Ok services) ->
             let
                 services_ =
                     Success <| Dict.fromList <| List.map (\x -> ( x.id, x )) services
 
                 ( graph_, simulation_ ) =
-                    updateGraphAndSim services_ model.connections
+                    updateGraphAndSim model.serviceId services_ model.connections
             in
                 { model
                     | services = services_
@@ -94,7 +103,7 @@ update msg ({ graph, simulation } as model) =
                     Success <| Dict.fromList <| List.map (\x -> ( x.id, x )) connections
 
                 ( graph_, simulation_ ) =
-                    updateGraphAndSim model.services connections_
+                    updateGraphAndSim model.serviceId model.services connections_
             in
                 { model
                     | connections = connections_
@@ -120,13 +129,27 @@ subscriptions model =
             Sub.none
 
 
-updateGraphAndSim : WebData (Dict Int Service) -> WebData (Dict Int Connection) -> ( Maybe (Graph Entity ()), Maybe (State Int) )
-updateGraphAndSim rdServices rdConnections =
+updateGraphAndSim : Maybe Int -> WebData (Dict Int Service) -> WebData (Dict Int Connection) -> ( Maybe (Graph Entity ()), Maybe (State Int) )
+updateGraphAndSim serviceId rdServices rdConnections =
     case ( rdServices, rdConnections ) of
         ( Success services, Success connections ) ->
             let
+                ( services_, connections_ ) =
+                    case serviceId of
+                        Just id ->
+                            let
+                                serviceConnections =
+                                    List.filter (\c -> c.from == id || c.to == id) (Dict.values connections)
+                            in
+                                ( List.filter (isInToOrFrom serviceConnections) (Dict.values services)
+                                , serviceConnections
+                                )
+
+                        Nothing ->
+                            ( Dict.values services, Dict.values connections )
+
                 graph =
-                    makeGraph (Dict.values services) (Dict.values connections)
+                    makeGraph services_ connections_
 
                 simulation =
                     makeSimulation graph
@@ -135,6 +158,18 @@ updateGraphAndSim rdServices rdConnections =
 
         _ ->
             ( Nothing, Nothing )
+
+
+isInToOrFrom : List Connection -> Service -> Bool
+isInToOrFrom connections { id } =
+    let
+        filteredConnections =
+            List.filter (\c -> c.from == id || c.to == id) connections
+    in
+        if List.length filteredConnections > 0 then
+            True
+        else
+            False
 
 
 screenWidth : Float
@@ -240,6 +275,7 @@ nodeElement showLabels node =
                 , strokeWidth "7px"
                 , cx (toString node.label.x)
                 , cy (toString node.label.y)
+                , onClick <| ShowGraphOf node.id
                 ]
                 [ Svg.title [] [ text node.label.value ]
                 ]

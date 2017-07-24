@@ -13,6 +13,7 @@ type Route
     | ConnectionsAdd
     | ConnectionsEdit Int
     | Graph
+    | GraphOf Int
 
 
 parse : Navigation.Location -> Maybe Route
@@ -31,6 +32,8 @@ route =
         , Url.map Connections <| Url.s "connections"
         , Url.map ConnectionsAdd <| Url.s "connections" </> (Url.s "add")
         , Url.map ConnectionsEdit <| Url.s "connections" </> Url.int
+        , Url.map Graph <| Url.s "graph"
+        , Url.map GraphOf <| Url.s "graph" </> Url.int
         ]
 
 
@@ -59,4 +62,7 @@ getLink route =
             "#/connections/" ++ toString id
 
         Graph ->
-            "#/"
+            "#/graph"
+
+        GraphOf id ->
+            "#/graph/" ++ toString id

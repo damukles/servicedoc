@@ -78,10 +78,13 @@ pageFromRoute route lastRoute =
                 ( EditServicePage pageModel, Cmd.map EditServicePageMsg pageCmd )
 
         Just Graph ->
-            graphPage
+            graphPage Nothing
+
+        Just (GraphOf id) ->
+            graphPage (Just id)
 
         Nothing ->
-            graphPage
+            graphPage Nothing
 
 
 connectionsEditPage : Maybe Int -> Maybe Route -> ( Page, Cmd Msg )
@@ -101,11 +104,11 @@ connectionsEditPage id route =
         ( EditConnectionPage pageModel, Cmd.map EditConnectionPageMsg pageCmd )
 
 
-graphPage : ( Page, Cmd Msg )
-graphPage =
+graphPage : Maybe Int -> ( Page, Cmd Msg )
+graphPage id =
     let
         ( pageModel, pageCmd ) =
-            Pages.Graph.init
+            Pages.Graph.init id
     in
         ( GraphPage pageModel, Cmd.map GraphPageMsg pageCmd )
 
