@@ -2,6 +2,7 @@ module Pages.Service exposing (Model, Msg, init, update, view)
 
 import Api.Entities exposing (Service)
 import Api.Request as Api
+import Bootstrap.Alert as Alert
 import Bootstrap.Button as Button
 import Bootstrap.Form.Input as Input
 import Bootstrap.Grid as Grid
@@ -17,6 +18,7 @@ import Table exposing (defaultCustomizations)
 
 type alias Model =
     { services : WebData (List Service)
+    , deleteAlert : Maybe String
     , tableState : Table.State
     , tableQuery : String
     }
@@ -24,6 +26,8 @@ type alias Model =
 
 type Msg
     = ResultGetServices (Result Http.Error (List Service))
+    | DeleteService Int
+    | ResultDeleteService (Result Http.Error String)
     | SetTableQuery String
     | SetTableState Table.State
 
@@ -31,6 +35,7 @@ type Msg
 init : ( Model, Cmd Msg )
 init =
     { services = NotAsked
+    , deleteAlert = Nothing
     , tableState = Table.initialSort "Name"
     , tableQuery = ""
     }
@@ -43,6 +48,15 @@ update msg model =
         ResultGetServices servicesResult ->
             { model | services = RemoteData.fromResult servicesResult } ! []
 
+        DeleteService id ->
+            model ! [ Api.deleteService id ResultDeleteService ]
+
+        ResultDeleteService (Ok _) ->
+            model ! [ Api.getServices ResultGetServices ]
+
+        ResultDeleteService (Err error) ->
+            { model | deleteAlert = Just (toString error) } ! []
+
         SetTableQuery query ->
             { model | tableQuery = query } ! []
 
@@ -53,6 +67,14 @@ update msg model =
 view : Model -> Html Msg
 view model =
     let
+        alertMessage =
+            case model.deleteAlert of
+                Just message ->
+                    Alert.danger [ text message ]
+
+                Nothing ->
+                    text ""
+
         lowerQuery =
             String.toLower model.tableQuery
 
@@ -95,9 +117,10 @@ tableConfig =
         }
 
 
-viewTableButtons : Service -> Table.HtmlDetails msg
+viewTableButtons : Service -> Table.HtmlDetails Msg
 viewTableButtons { id } =
     Table.HtmlDetails []
         [ Button.linkButton [ Button.small, Button.attrs [ href <| Routing.getLink (ServicesConnections id) ] ] [ text "Connections" ]
         , Button.linkButton [ Button.small, Button.attrs [ href <| Routing.getLink (ServicesEdit id) ] ] [ text "Edit" ]
+        , Button.linkButton [ Button.small, Button.onClick <| DeleteService id ] [ text "Delete" ]
         ]

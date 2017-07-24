@@ -9,7 +9,7 @@ import Bootstrap.Form.Input as Input
 import Bootstrap.Form.Textarea as Textarea
 import Bootstrap.Grid as Grid
 import Html exposing (Html, div, text)
-import Html.Attributes exposing (for)
+import Html.Attributes exposing (for, class)
 import Http
 import Navigation
 import RemoteData exposing (RemoteData(..), WebData)
@@ -28,6 +28,7 @@ type Msg
     = ResultGetService (Result Http.Error Service)
     | UpdateService Service
     | SaveService
+    | Cancel
     | ResultSaveService (Result Http.Error Service)
 
 
@@ -73,6 +74,9 @@ update msg model =
                             Api.addService service ResultSaveService
             in
                 model ! [ cmd ]
+
+        Cancel ->
+            model ! [ Navigation.newUrl <| Routing.getLink Services ]
 
         ResultSaveService (Ok service) ->
             { model | service = Success service }
@@ -134,6 +138,7 @@ view model =
                             ]
                         , Button.button [ Button.onClick SaveService, Button.disabled <| not <| isValid service ]
                             [ text "Save" ]
+                        , Button.button [ Button.onClick Cancel, Button.attrs [ class "ml-1" ] ] [ text "Cancel" ]
                         ]
                     ]
 

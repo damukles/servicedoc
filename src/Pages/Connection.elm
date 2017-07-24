@@ -2,6 +2,7 @@ module Pages.Connection exposing (Model, Msg, init, update, view)
 
 import Api.Entities exposing (Connection, Service)
 import Api.Request as Api
+import Bootstrap.Alert as Alert
 import Bootstrap.Button as Button
 import Bootstrap.Form.Input as Input
 import Bootstrap.Grid as Grid
@@ -19,6 +20,7 @@ type alias Model =
     { connections : WebData (List Connection)
     , services : WebData (List Service)
     , serviceId : Maybe Int
+    , deleteAlert : Maybe String
     , tableState : Table.State
     , tableQuery : String
     }
@@ -27,6 +29,8 @@ type alias Model =
 type Msg
     = ResultGetConnections (Result Http.Error (List Connection))
     | ResultGetServices (Result Http.Error (List Service))
+    | DeleteConnection Int
+    | ResultDeleteConnection (Result Http.Error String)
     | SetTableQuery String
     | SetTableState Table.State
 
@@ -36,6 +40,7 @@ init id =
     { connections = NotAsked
     , services = NotAsked
     , serviceId = id
+    , deleteAlert = Nothing
     , tableState = Table.initialSort "Name"
     , tableQuery = ""
     }
@@ -53,6 +58,15 @@ update msg model =
         ResultGetServices servicesResult ->
             { model | services = RemoteData.fromResult servicesResult } ! []
 
+        DeleteConnection id ->
+            model ! [ Api.deleteConnection id ResultDeleteConnection ]
+
+        ResultDeleteConnection (Ok _) ->
+            model ! [ Api.getConnections ResultGetConnections ]
+
+        ResultDeleteConnection (Err error) ->
+            { model | deleteAlert = Just (toString error) } ! []
+
         SetTableQuery query ->
             { model | tableQuery = query } ! []
 
@@ -63,6 +77,14 @@ update msg model =
 view : Model -> Html Msg
 view model =
     let
+        alertMessage =
+            case model.deleteAlert of
+                Just message ->
+                    Alert.danger [ text message ]
+
+                Nothing ->
+                    text ""
+
         connections =
             RemoteData.withDefault [] model.connections
 
@@ -128,8 +150,9 @@ toName services id =
         |> Maybe.withDefault "Error"
 
 
-viewTableButtons : Connection -> Table.HtmlDetails msg
+viewTableButtons : Connection -> Table.HtmlDetails Msg
 viewTableButtons { id } =
     Table.HtmlDetails []
         [ Button.linkButton [ Button.small, Button.attrs [ href <| Routing.getLink (ConnectionsEdit id) ] ] [ text "Edit" ]
+        , Button.linkButton [ Button.small, Button.onClick <| DeleteConnection id ] [ text "Delete" ]
         ]

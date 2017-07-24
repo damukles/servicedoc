@@ -10,7 +10,7 @@ import Bootstrap.Form.Select as Select
 import Bootstrap.Form.Textarea as Textarea
 import Bootstrap.Grid as Grid
 import Html exposing (Html, div, text)
-import Html.Attributes exposing (disabled, for, selected, value)
+import Html.Attributes exposing (disabled, for, selected, value, class)
 import Http
 import Navigation
 import RemoteData exposing (RemoteData(..), WebData)
@@ -32,6 +32,7 @@ type Msg
     | ResultGetConnection (Result Http.Error Connection)
     | UpdateConnection Connection
     | SaveConnection
+    | Cancel
     | ResultSaveConnection (Result Http.Error Connection)
 
 
@@ -83,6 +84,9 @@ update msg model =
                             Api.addConnection connection ResultSaveConnection
             in
                 model ! [ cmd ]
+
+        Cancel ->
+            model ! [ Navigation.newUrl <| Routing.getLink model.routeBack ]
 
         ResultSaveConnection (Ok connection) ->
             { model | connection = Success connection }
@@ -182,6 +186,7 @@ view model =
                             ]
                         , Button.button [ Button.onClick SaveConnection, Button.disabled <| not <| isValid connection ]
                             [ text "Save" ]
+                        , Button.button [ Button.onClick Cancel, Button.attrs [ class "ml-1" ] ] [ text "Cancel" ]
                         ]
                     ]
 
@@ -203,13 +208,18 @@ serviceSelectOptions id services =
 
 viewServiceSelect : Int -> Service -> Select.Item msg
 viewServiceSelect id service =
-    Select.item [ value <| toString service.id, selected (id == service.id) ] [ text service.name ]
+    let
+        x =
+            Debug.log "id" id
+    in
+        Select.item [ value <| toString service.id, selected (id == service.id) ] [ text service.name ]
 
 
 addDefaultOption : Int -> List (Select.Item msg) -> List (Select.Item msg)
 addDefaultOption id list =
     if id < 0 then
-        (Select.item [ value "-1", selected True, disabled True ] [ text "--- select a service ---" ]) :: list
+        -- dummy item needs to be at the end to not screw up first selection
+        list ++ [ (Select.item [ value "-1", selected True, disabled True ] [ text "--- select a service ---" ]) ]
     else
         list
 
@@ -221,7 +231,7 @@ setName connection name =
 
 setFrom : { b | from : a } -> String -> { b | from : Int }
 setFrom connection from =
-    { connection | from = Result.withDefault -1 <| String.toInt from }
+    { connection | from = Debug.log "from" <| Result.withDefault -1 <| String.toInt from }
 
 
 setTo : { b | to : a } -> String -> { b | to : Int }

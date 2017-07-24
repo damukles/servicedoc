@@ -52,6 +52,20 @@ updateConnection connection msg =
         |> Http.send msg
 
 
+deleteConnection : Int -> (Result Http.Error String -> msg) -> Cmd msg
+deleteConnection id msg =
+    Http.request
+        { method = "DELETE"
+        , headers = []
+        , url = connectionsUrl ++ toString id
+        , body = Http.emptyBody
+        , expect = Http.expectString
+        , timeout = Nothing
+        , withCredentials = False
+        }
+        |> Http.send msg
+
+
 getServices : (Result Http.Error (List Service) -> msg) -> Cmd msg
 getServices msg =
     Http.get servicesUrl (Json.Decode.list decodeService)
@@ -78,6 +92,20 @@ updateService service msg =
         , url = servicesUrl ++ toString service.id
         , body = Http.jsonBody <| encodeService True service
         , expect = Http.expectJson decodeService
+        , timeout = Nothing
+        , withCredentials = False
+        }
+        |> Http.send msg
+
+
+deleteService : Int -> (Result Http.Error String -> msg) -> Cmd msg
+deleteService id msg =
+    Http.request
+        { method = "DELETE"
+        , headers = []
+        , url = servicesUrl ++ toString id
+        , body = Http.emptyBody
+        , expect = Http.expectString
         , timeout = Nothing
         , withCredentials = False
         }
