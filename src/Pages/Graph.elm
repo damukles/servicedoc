@@ -4,6 +4,7 @@ import AnimationFrame
 import Api.Entities exposing (Connection, Service)
 import Api.Request as Api
 import Bootstrap.Grid as Grid
+import Bootstrap.Button as Button
 import Dict exposing (Dict)
 import Graph exposing (Edge, Graph, Node, NodeContext, NodeId)
 import Html exposing (Html, div)
@@ -18,6 +19,7 @@ import Visualization.Force as Force exposing (State)
 type alias Model =
     { graph : Maybe (Graph Entity ())
     , simulation : Maybe (Force.State NodeId)
+    , showLabels : Bool
     , connections : WebData (Dict Int Connection)
     , services : WebData (Dict Int Service)
     }
@@ -25,6 +27,7 @@ type alias Model =
 
 type Msg
     = Tick Time
+    | ToggleLabels
     | ResultGetConnections (Result Http.Error (List Connection))
     | ResultGetServices (Result Http.Error (List Service))
 
@@ -37,6 +40,7 @@ init : ( Model, Cmd Msg )
 init =
     { graph = Nothing
     , simulation = Nothing
+    , showLabels = True
     , connections = NotAsked
     , services = NotAsked
     }
@@ -62,6 +66,9 @@ update msg ({ graph, simulation } as model) =
 
                 _ ->
                     model ! []
+
+        ToggleLabels ->
+            { model | showLabels = not model.showLabels } ! []
 
         ResultGetServices (Ok services) ->
             let
@@ -210,26 +217,34 @@ linkElement graph edge =
             []
 
 
-nodeElement : { d | id : NodeId, label : { c | value : String, x : Float, y : Float } } -> Svg Msg
-nodeElement node =
-    g []
-        [ circle
-            [ r "3.5"
-            , fill "#000"
-            , stroke "transparent"
-            , strokeWidth "7px"
-            , cx (toString node.label.x)
-            , cy (toString node.label.y)
+nodeElement : Bool -> { d | id : NodeId, label : { c | value : String, x : Float, y : Float } } -> Svg Msg
+nodeElement showLabels node =
+    let
+        label =
+            if showLabels then
+                [ Svg.text_
+                    [ x (toString node.label.x)
+                    , y (toString <| node.label.y + 16)
+                    , textAnchor "middle"
+                    ]
+                    [ text node.label.value ]
+                ]
+            else
+                []
+    in
+        g [] <|
+            [ circle
+                [ r "3.5"
+                , fill "#000"
+                , stroke "transparent"
+                , strokeWidth "7px"
+                , cx (toString node.label.x)
+                , cy (toString node.label.y)
+                ]
+                [ Svg.title [] [ text node.label.value ]
+                ]
             ]
-            [ Svg.title [] [ text node.label.value ]
-            ]
-        , Svg.text_
-            [ x (toString node.label.x)
-            , y (toString <| node.label.y + 16)
-            , textAnchor "middle"
-            ]
-            [ text node.label.value ]
-        ]
+                ++ label
 
 
 view : Model -> Svg Msg
@@ -240,12 +255,27 @@ view model =
                 Just graph ->
                     svg [ width (toString screenWidth ++ "px"), height (toString screenHeight ++ "px") ]
                         [ g [ class "links" ] <| List.map (linkElement graph) <| Graph.edges graph
-                        , g [ class "nodes" ] <| List.map nodeElement <| Graph.nodes graph
+                        , g [ class "nodes" ] <| List.map (nodeElement model.showLabels) <| Graph.nodes graph
                         ]
 
                 Nothing ->
                     div [] [ text "loading.." ]
+
+        buttonText =
+            if model.showLabels then
+                "Hide Labels"
+            else
+                "Show Labels"
     in
         Grid.container []
-            [ svgGraph
+            [ Grid.row []
+                [ Grid.col []
+                    [ Button.button [ Button.onClick ToggleLabels ] [ text buttonText ]
+                    ]
+                ]
+            , Grid.row []
+                [ Grid.col []
+                    [ svgGraph
+                    ]
+                ]
             ]
