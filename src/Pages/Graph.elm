@@ -134,7 +134,7 @@ updateGraphAndSim serviceId rdServices rdConnections =
     case ( rdServices, rdConnections ) of
         ( Success services, Success connections ) ->
             let
-                ( services_, connections_ ) =
+                ( services_, connections_, distance ) =
                     case serviceId of
                         Just id ->
                             let
@@ -143,16 +143,17 @@ updateGraphAndSim serviceId rdServices rdConnections =
                             in
                                 ( List.filter (isInToOrFrom serviceConnections) (Dict.values services)
                                 , serviceConnections
+                                , 100
                                 )
 
                         Nothing ->
-                            ( Dict.values services, Dict.values connections )
+                            ( Dict.values services, Dict.values connections, 50 )
 
                 graph =
                     makeGraph services_ connections_
 
                 simulation =
-                    makeSimulation graph
+                    makeSimulation distance graph
             in
                 ( Just graph, Just simulation )
 
@@ -209,17 +210,18 @@ makeGraph services connections =
             )
 
 
-makeSimulation : Graph n e -> State Int
-makeSimulation graph =
-    let
-        link { from, to } =
-            ( from, to )
-    in
-        Force.simulation
-            [ Force.links <| List.map link <| Graph.edges graph
-            , Force.manyBody <| List.map .id <| Graph.nodes graph
-            , Force.center (screenWidth / 2) (screenHeight / 2)
-            ]
+makeSimulation : Float -> Graph n e -> State Int
+makeSimulation dist graph =
+    Force.simulation
+        [ Force.customLinks 1 <| List.map (link dist) <| Graph.edges graph
+        , Force.manyBody <| List.map .id <| Graph.nodes graph
+        , Force.center (screenWidth / 2) (screenHeight / 2)
+        ]
+
+
+link : b -> { e | from : c, to : d } -> { distance : b, source : c, strength : Maybe a, target : d }
+link dist { from, to } =
+    { source = from, target = to, distance = dist, strength = Nothing }
 
 
 nodes : List { b | id : Graph.NodeId, name : a } -> List (Graph.Node a)
