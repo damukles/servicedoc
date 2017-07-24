@@ -10,7 +10,7 @@ import Bootstrap.Form.Select as Select
 import Bootstrap.Form.Textarea as Textarea
 import Bootstrap.Grid as Grid
 import Html exposing (Html, div, text)
-import Html.Attributes exposing (disabled, for, selected, value, class)
+import Html.Attributes exposing (disabled, for, selected, value, class, hidden)
 import Http
 import Navigation
 import RemoteData exposing (RemoteData(..), WebData)
@@ -202,24 +202,21 @@ view model =
 
 serviceSelectOptions : Int -> List Service -> List (Select.Item msg)
 serviceSelectOptions id services =
-    List.map (viewServiceSelect id) services
+    List.sortBy .name services
+        |> List.map (viewServiceSelect id)
         |> addDefaultOption id
 
 
 viewServiceSelect : Int -> Service -> Select.Item msg
 viewServiceSelect id service =
-    let
-        x =
-            Debug.log "id" id
-    in
-        Select.item [ value <| toString service.id, selected (id == service.id) ] [ text service.name ]
+    Select.item [ value <| toString service.id, selected (id == service.id) ] [ text service.name ]
 
 
 addDefaultOption : Int -> List (Select.Item msg) -> List (Select.Item msg)
 addDefaultOption id list =
     if id < 0 then
         -- dummy item needs to be at the end to not screw up first selection
-        list ++ [ (Select.item [ value "-1", selected True, disabled True ] [ text "--- select a service ---" ]) ]
+        list ++ [ (Select.item [ value "-1", selected True, disabled True, hidden True ] [ text "--- select a service ---" ]) ]
     else
         list
 
@@ -231,7 +228,7 @@ setName connection name =
 
 setFrom : { b | from : a } -> String -> { b | from : Int }
 setFrom connection from =
-    { connection | from = Debug.log "from" <| Result.withDefault -1 <| String.toInt from }
+    { connection | from = Result.withDefault -1 <| String.toInt from }
 
 
 setTo : { b | to : a } -> String -> { b | to : Int }

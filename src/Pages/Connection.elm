@@ -8,7 +8,7 @@ import Bootstrap.Form.Input as Input
 import Bootstrap.Grid as Grid
 import Bootstrap.Grid.Col as Col
 import Bootstrap.Grid.Row as Row
-import Html exposing (Html, div, text)
+import Html exposing (Html, div, text, h5)
 import Html.Attributes exposing (class, href)
 import Http
 import RemoteData exposing (WebData, RemoteData(..))
@@ -88,13 +88,20 @@ view model =
         connections =
             RemoteData.withDefault [] model.connections
 
-        connections_ =
+        ( connections_, title ) =
             case model.serviceId of
                 Just id ->
-                    List.filter (\c -> c.from == id || c.to == id) connections
+                    ( List.filter (\c -> c.from == id || c.to == id) connections
+                    , (List.filter ((==) id << .id) (RemoteData.withDefault [] model.services)
+                        |> List.head
+                        |> Maybe.map .name
+                        |> Maybe.withDefault ""
+                      )
+                        ++ " Connections"
+                    )
 
                 Nothing ->
-                    connections
+                    ( connections, "Connections" )
 
         lowerQuery =
             String.toLower model.tableQuery
@@ -106,9 +113,16 @@ view model =
             List.filter (String.contains lowerQuery << String.toLower << allProperties) connections_
     in
         Grid.container []
-            [ Grid.row []
-                [ Grid.col [] [ Button.linkButton [ Button.attrs [ href <| Routing.getLink ConnectionsAdd ] ] [ text "Add" ] ]
-                , Grid.col []
+            [ Grid.row [ Row.attrs [ class "spacer-12" ] ]
+                [ Grid.col [ Col.md12 ] [ h5 [] [ text title ] ]
+                ]
+            , Grid.row []
+                [ Grid.col [ Col.md4 ]
+                    [ Button.linkButton
+                        [ Button.attrs [ href <| Routing.getLink ConnectionsAdd ] ]
+                        [ text "Add" ]
+                    ]
+                , Grid.col [ Col.md8 ]
                     [ Input.text
                         [ Input.placeholder "Search"
                         , Input.value model.tableQuery

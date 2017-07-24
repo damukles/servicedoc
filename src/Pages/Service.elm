@@ -8,7 +8,7 @@ import Bootstrap.Form.Input as Input
 import Bootstrap.Grid as Grid
 import Bootstrap.Grid.Col as Col
 import Bootstrap.Grid.Row as Row
-import Html exposing (Html, div, text)
+import Html exposing (Html, div, text, h5)
 import Html.Attributes exposing (class, href)
 import Http
 import RemoteData exposing (RemoteData(..), WebData)
@@ -85,7 +85,10 @@ view model =
             List.filter (String.contains lowerQuery << String.toLower << allProperties) <| RemoteData.withDefault [] model.services
     in
         Grid.container []
-            [ Grid.row []
+            [ Grid.row [ Row.attrs [ class "spacer-12" ] ]
+                [ Grid.col [ Col.md12 ] [ h5 [] [ text "Services" ] ]
+                ]
+            , Grid.row []
                 [ Grid.col [] [ Button.linkButton [ Button.attrs [ href <| Routing.getLink ServicesAdd ] ] [ text "Add" ] ]
                 , Grid.col []
                     [ Input.text
