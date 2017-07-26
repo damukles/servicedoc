@@ -8,7 +8,7 @@ import Bootstrap.Form.Input as Input
 import Bootstrap.Grid as Grid
 import Bootstrap.Grid.Col as Col
 import Bootstrap.Grid.Row as Row
-import Html exposing (Html, div, text, h5)
+import Html exposing (Html, div, text, h5, span)
 import Html.Attributes exposing (class, href)
 import Http
 import RemoteData exposing (WebData, RemoteData(..))
@@ -20,6 +20,7 @@ type alias Model =
     { connections : WebData (List Connection)
     , services : WebData (List Service)
     , serviceId : Maybe Int
+    , deleting : Maybe Int
     , deleteAlert : Maybe String
     , tableState : Table.State
     , tableQuery : String
@@ -40,6 +41,7 @@ init id =
     { connections = NotAsked
     , services = NotAsked
     , serviceId = id
+    , deleting = Nothing
     , deleteAlert = Nothing
     , tableState = Table.initialSort "Name"
     , tableQuery = ""
@@ -59,7 +61,22 @@ update msg model =
             { model | services = RemoteData.fromResult servicesResult } ! []
 
         DeleteConnection id ->
-            model ! [ Api.deleteConnection id ResultDeleteConnection ]
+            let
+                setNewId =
+                    ( { model | deleting = Just id }, Cmd.none )
+
+                ( model_, cmd ) =
+                    case model.deleting of
+                        Just id_ ->
+                            if id_ == id then
+                                ( { model | deleting = Nothing }, Api.deleteConnection id_ ResultDeleteConnection )
+                            else
+                                setNewId
+
+                        Nothing ->
+                            setNewId
+            in
+                model_ ! [ cmd ]
 
         ResultDeleteConnection (Ok _) ->
             model ! [ Api.getConnections ResultGetConnections ]
@@ -132,13 +149,13 @@ view model =
                 ]
             , Grid.row [ Row.attrs [ class "spacer-12" ] ]
                 [ Grid.col [ Col.md12 ]
-                    [ Table.view (tableConfig <| RemoteData.withDefault [] model.services) model.tableState filter ]
+                    [ Table.view (tableConfig model.deleting <| RemoteData.withDefault [] model.services) model.tableState filter ]
                 ]
             ]
 
 
-tableConfig : List Service -> Table.Config Connection Msg
-tableConfig services =
+tableConfig : Maybe Int -> List Service -> Table.Config Connection Msg
+tableConfig deleting services =
     Table.customConfig
         { toId = .name
         , toMsg = SetTableState
@@ -150,7 +167,7 @@ tableConfig services =
             , Table.stringColumn "Connection Details" .connectionDetails
             , Table.stringColumn "Authentication" .authentication
             , Table.stringColumn "Description" .description
-            , Table.veryCustomColumn { name = "Actions", viewData = viewTableButtons, sorter = Table.unsortable }
+            , Table.veryCustomColumn { name = "Actions", viewData = viewTableButtons deleting, sorter = Table.unsortable }
             ]
         , customizations = { defaultCustomizations | tableAttrs = [ class "table" ] }
         }
@@ -164,9 +181,24 @@ toName services id =
         |> Maybe.withDefault "Error"
 
 
-viewTableButtons : Connection -> Table.HtmlDetails Msg
-viewTableButtons { id } =
-    Table.HtmlDetails []
-        [ Button.linkButton [ Button.small, Button.attrs [ href <| Routing.getLink (ConnectionsEdit id) ] ] [ text "Edit" ]
-        , Button.linkButton [ Button.small, Button.onClick <| DeleteConnection id ] [ text "Delete" ]
-        ]
+viewTableButtons : Maybe Int -> Connection -> Table.HtmlDetails Msg
+viewTableButtons deleting { id } =
+    let
+        usualMode =
+            ( "Delete", "" )
+
+        ( deleteText, deleteClass ) =
+            case deleting of
+                Just deletingId ->
+                    if deletingId == id then
+                        ( "Sure?", "delete-sure" )
+                    else
+                        usualMode
+
+                Nothing ->
+                    usualMode
+    in
+        Table.HtmlDetails []
+            [ Button.linkButton [ Button.small, Button.attrs [ href <| Routing.getLink (ConnectionsEdit id) ] ] [ text "Edit" ]
+            , Button.linkButton [ Button.small, Button.onClick <| DeleteConnection id ] [ span [ class deleteClass ] [ text deleteText ] ]
+            ]

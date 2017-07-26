@@ -9,6 +9,25 @@ body {
     padding: 12px;
 }
 
-.nodes {
+.graph-svg {
   font-size: 11px;
+}
+
+.graph-node {
+    fill: #000;
+    stroke: transparent;
+    stroke-width: 7px;
+}
+
+.graph-node:hover {
+    fill: #0275D8;
+}
+
+.graph-link {
+    stroke-width: 1;
+    stroke: #aaa;
+}
+
+.delete-sure {
+    color: red;
 }

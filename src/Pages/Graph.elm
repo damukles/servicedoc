@@ -5,15 +5,17 @@ import Api.Entities exposing (Connection, Service)
 import Api.Request as Api
 import Bootstrap.Button as Button
 import Bootstrap.Grid as Grid
+import Bootstrap.Grid.Col as Col
 import Dict exposing (Dict)
 import Graph exposing (Edge, Graph, Node, NodeContext, NodeId)
 import Html exposing (Html, div)
+import Html.Attributes as Html
 import Http
 import Navigation
 import RemoteData exposing (RemoteData(..), WebData)
 import Routing exposing (Route(..))
 import Svg exposing (Svg, circle, g, line, svg, text, text_)
-import Svg.Attributes exposing (class, cx, cy, fill, height, r, stroke, strokeWidth, textAnchor, width, x, x1, x2, y, y1, y2)
+import Svg.Attributes exposing (class, cx, cy, height, r, viewBox, preserveAspectRatio, textAnchor, width, x, x1, x2, y, y1, y2)
 import Svg.Events exposing (onClick)
 import Time exposing (Time)
 import Visualization.Force as Force exposing (State)
@@ -143,11 +145,11 @@ updateGraphAndSim serviceId rdServices rdConnections =
                             in
                                 ( List.filter (isInToOrFrom serviceConnections) (Dict.values services)
                                 , serviceConnections
-                                , 100
+                                , 160
                                 )
 
                         Nothing ->
-                            ( Dict.values services, Dict.values connections, 50 )
+                            ( Dict.values services, Dict.values connections, 80 )
 
                 graph =
                     makeGraph services_ connections_
@@ -244,8 +246,7 @@ linkElement graph edge =
             Maybe.withDefault (Force.entity 0 "") <| Maybe.map (.node >> .label) <| Graph.get edge.to graph
     in
         line
-            [ strokeWidth "1"
-            , stroke "#aaa"
+            [ class "graph-link"
             , x1 (toString source.x)
             , y1 (toString source.y)
             , x2 (toString target.x)
@@ -272,9 +273,7 @@ nodeElement showLabels node =
         g [] <|
             [ circle
                 [ r "3.5"
-                , fill "#000"
-                , stroke "transparent"
-                , strokeWidth "7px"
+                , class "graph-node"
                 , cx (toString node.label.x)
                 , cy (toString node.label.y)
                 , onClick <| ShowGraphOf node.id
@@ -291,9 +290,13 @@ view model =
         svgGraph =
             case model.graph of
                 Just graph ->
-                    svg [ width (toString screenWidth ++ "px"), height (toString screenHeight ++ "px") ]
-                        [ g [ class "links" ] <| List.map (linkElement graph) <| Graph.edges graph
-                        , g [ class "nodes" ] <| List.map (nodeElement model.showLabels) <| Graph.nodes graph
+                    svg
+                        [ viewBox <| "0 0 " ++ (toString screenWidth) ++ " " ++ (toString screenHeight)
+                        , preserveAspectRatio "xMidYMid meet"
+                        , class "graph-svg"
+                        ]
+                        [ g [] <| List.map (linkElement graph) <| Graph.edges graph
+                        , g [] <| List.map (nodeElement model.showLabels) <| Graph.nodes graph
                         ]
 
                 Nothing ->
@@ -309,10 +312,11 @@ view model =
             [ Grid.row []
                 [ Grid.col []
                     [ Button.button [ Button.onClick ToggleLabels ] [ text buttonText ]
+                    , Html.span [ Html.style [ ( "margin-left", "24px" ) ] ] [ text "Click on a node to zoom in.." ]
                     ]
                 ]
             , Grid.row []
-                [ Grid.col []
+                [ Grid.col [ Col.md12 ]
                     [ svgGraph
                     ]
                 ]

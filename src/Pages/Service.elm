@@ -8,7 +8,7 @@ import Bootstrap.Form.Input as Input
 import Bootstrap.Grid as Grid
 import Bootstrap.Grid.Col as Col
 import Bootstrap.Grid.Row as Row
-import Html exposing (Html, div, text, h5)
+import Html exposing (Html, div, text, h5, span)
 import Html.Attributes exposing (class, href)
 import Http
 import RemoteData exposing (RemoteData(..), WebData)
@@ -18,6 +18,7 @@ import Table exposing (defaultCustomizations)
 
 type alias Model =
     { services : WebData (List Service)
+    , deleting : Maybe Int
     , deleteAlert : Maybe String
     , tableState : Table.State
     , tableQuery : String
@@ -35,6 +36,7 @@ type Msg
 init : ( Model, Cmd Msg )
 init =
     { services = NotAsked
+    , deleting = Nothing
     , deleteAlert = Nothing
     , tableState = Table.initialSort "Name"
     , tableQuery = ""
@@ -49,7 +51,23 @@ update msg model =
             { model | services = RemoteData.fromResult servicesResult } ! []
 
         DeleteService id ->
-            model ! [ Api.deleteService id ResultDeleteService ]
+            let
+                setNewId =
+                    ( { model | deleting = Just id }, Cmd.none )
+
+                ( model_, cmd ) =
+                    case model.deleting of
+                        Just id_ ->
+                            if id_ == id then
+                                ( { model | deleting = Nothing }, Api.deleteService id ResultDeleteService )
+                            else
+                                setNewId
+
+                        Nothing ->
+                            setNewId
+            in
+                model_
+                    ! [ cmd ]
 
         ResultDeleteService (Ok _) ->
             model ! [ Api.getServices ResultGetServices ]
@@ -100,13 +118,13 @@ view model =
                 ]
             , Grid.row [ Row.attrs [ class "spacer-12" ] ]
                 [ Grid.col [ Col.md12 ]
-                    [ Table.view tableConfig model.tableState filter ]
+                    [ Table.view (tableConfig model.deleting) model.tableState filter ]
                 ]
             ]
 
 
-tableConfig : Table.Config Service Msg
-tableConfig =
+tableConfig : Maybe Int -> Table.Config Service Msg
+tableConfig deleting =
     Table.customConfig
         { toId = .name
         , toMsg = SetTableState
@@ -114,16 +132,31 @@ tableConfig =
             [ Table.stringColumn "Name" .name
             , Table.stringColumn "Hosted On" .hostedOn
             , Table.stringColumn "Description" .description
-            , Table.veryCustomColumn { name = "Actions", viewData = viewTableButtons, sorter = Table.unsortable }
+            , Table.veryCustomColumn { name = "Actions", viewData = viewTableButtons deleting, sorter = Table.unsortable }
             ]
         , customizations = { defaultCustomizations | tableAttrs = [ class "table" ] }
         }
 
 
-viewTableButtons : Service -> Table.HtmlDetails Msg
-viewTableButtons { id } =
-    Table.HtmlDetails []
-        [ Button.linkButton [ Button.small, Button.attrs [ href <| Routing.getLink (ServicesConnections id) ] ] [ text "Connections" ]
-        , Button.linkButton [ Button.small, Button.attrs [ href <| Routing.getLink (ServicesEdit id) ] ] [ text "Edit" ]
-        , Button.linkButton [ Button.small, Button.onClick <| DeleteService id ] [ text "Delete" ]
-        ]
+viewTableButtons : Maybe Int -> Service -> Table.HtmlDetails Msg
+viewTableButtons deleting { id } =
+    let
+        usualMode =
+            ( "Delete", "" )
+
+        ( deleteText, deleteClass ) =
+            case deleting of
+                Just deletingId ->
+                    if deletingId == id then
+                        ( "Sure?", "delete-sure" )
+                    else
+                        usualMode
+
+                Nothing ->
+                    usualMode
+    in
+        Table.HtmlDetails []
+            [ Button.linkButton [ Button.small, Button.attrs [ href <| Routing.getLink (ServicesConnections id) ] ] [ text "Connections" ]
+            , Button.linkButton [ Button.small, Button.attrs [ href <| Routing.getLink (ServicesEdit id) ] ] [ text "Edit" ]
+            , Button.linkButton [ Button.small, Button.onClick <| DeleteService id ] [ span [ class deleteClass ] [ text deleteText ] ]
+            ]
