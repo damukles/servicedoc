@@ -125,17 +125,25 @@ view model =
 
 tableConfig : Maybe Int -> Table.Config Service Msg
 tableConfig deleting =
-    Table.customConfig
-        { toId = .name
-        , toMsg = SetTableState
-        , columns =
-            [ Table.stringColumn "Name" .name
-            , Table.stringColumn "Hosted On" .hostedOn
-            , Table.stringColumn "Description" .description
-            , Table.veryCustomColumn { name = "Actions", viewData = viewTableButtons deleting, sorter = Table.unsortable }
+    let
+        tableColumns =
+            [ Table.stringColumn "Name" Nothing .name
+            , Table.stringColumn "Hosted On" (Just "hidden-xs-down") .hostedOn
+            , Table.stringColumn "Description" (Just "hidden-sm-down") .description
+            , Table.veryCustomColumn
+                { name = "Actions"
+                , viewData = viewTableButtons deleting
+                , sorter = Table.unsortable
+                , colClass = Nothing
+                }
             ]
-        , customizations = { defaultCustomizations | tableAttrs = [ class "table" ] }
-        }
+    in
+        Table.customConfig
+            { toId = .name
+            , toMsg = SetTableState
+            , columns = tableColumns
+            , customizations = { defaultCustomizations | tableAttrs = [ class "table" ] }
+            }
 
 
 viewTableButtons : Maybe Int -> Service -> Table.HtmlDetails Msg

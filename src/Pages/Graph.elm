@@ -149,7 +149,7 @@ updateGraphAndSim serviceId rdServices rdConnections =
                                 )
 
                         Nothing ->
-                            ( Dict.values services, Dict.values connections, 80 )
+                            ( Dict.values services, Dict.values connections, 100 )
 
                 graph =
                     makeGraph services_ connections_

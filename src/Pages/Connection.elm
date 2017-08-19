@@ -156,21 +156,27 @@ view model =
 
 tableConfig : Maybe Int -> List Service -> Table.Config Connection Msg
 tableConfig deleting services =
-    Table.customConfig
-        { toId = .name
-        , toMsg = SetTableState
-        , columns =
-            [ Table.stringColumn "Name" .name
-            , Table.stringColumn "From" ((toName services) << .from)
-            , Table.stringColumn "To" ((toName services) << .to)
-            , Table.stringColumn "Connection Type" .connectionType
-            , Table.stringColumn "Connection Details" .connectionDetails
-            , Table.stringColumn "Authentication" .authentication
-            , Table.stringColumn "Description" .description
-            , Table.veryCustomColumn { name = "Actions", viewData = viewTableButtons deleting, sorter = Table.unsortable }
+    let
+        tableColumns =
+            [ Table.stringColumn "Name" Nothing .name
+            , Table.stringColumn "From" (Just "hidden-sm-down") ((toName services) << .from)
+            , Table.stringColumn "To" (Just "hidden-sm-down") ((toName services) << .to)
+            , Table.stringColumn "Connection Type" (Just "hidden-md-down") .connectionType
+            , Table.stringColumn "Authentication" (Just "hidden-md-down") .authentication
+            , Table.veryCustomColumn
+                { name = "Actions"
+                , viewData = viewTableButtons deleting
+                , sorter = Table.unsortable
+                , colClass = Nothing
+                }
             ]
-        , customizations = { defaultCustomizations | tableAttrs = [ class "table" ] }
-        }
+    in
+        Table.customConfig
+            { toId = .name
+            , toMsg = SetTableState
+            , columns = tableColumns
+            , customizations = { defaultCustomizations | tableAttrs = [ class "table" ] }
+            }
 
 
 toName : List { b | id : a, name : String } -> a -> String
