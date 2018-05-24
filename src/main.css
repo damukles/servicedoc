@@ -5,6 +5,10 @@ body {
   color: #293c4b;
 }
 
+.header-bg {
+    background-color: #6084AB;
+}
+
 .spacer-12 {
     padding: 12px;
 }

@@ -16,7 +16,7 @@ import Routing exposing (Route(..))
 view : Model -> Html Msg
 view model =
     div []
-        [ Grid.container [] [ navbar model ]
+        [ div [ class "header-bg" ] [ navbar model ]
         , Grid.container [ class "spacer-12" ] [ content model ]
         ]
 
@@ -25,6 +25,8 @@ navbar : Model -> Html Msg
 navbar model =
     Navbar.config NavbarMsg
         |> Navbar.withAnimation
+        |> Navbar.container
+        |> Navbar.darkCustomClass "header-bg"
         |> Navbar.brand [ href "#" ] [ text "Service Doc" ]
         |> Navbar.items
             [ Navbar.itemLink [ href <| Routing.getLink Services ] [ text "Services" ]

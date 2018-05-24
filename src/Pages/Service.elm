@@ -88,7 +88,7 @@ view model =
         alertMessage =
             case model.deleteAlert of
                 Just message ->
-                    Alert.danger [ text message ]
+                    Alert.simpleDanger [] [ text message ]
 
                 Nothing ->
                     text ""

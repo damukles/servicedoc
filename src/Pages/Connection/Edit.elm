@@ -102,58 +102,72 @@ view model =
         alertMessage =
             case model.saveAlert of
                 Just message ->
-                    Alert.danger [ text message ]
+                    Alert.simpleDanger [] [ text message ]
 
                 Nothing ->
                     text ""
 
-        groupDangerIfNot bool =
-            if bool then
-                []
+        validitySelect isValid =
+            if isValid then
+                Select.success
             else
-                [ Form.groupDanger ]
+                Select.danger
+
+        validityInput isValid =
+            if isValid then
+                Input.success
+            else
+                Input.danger
     in
         case ( model.services, model.connection ) of
             ( Success services, Success connection ) ->
                 Grid.container []
                     [ Form.form []
                         [ alertMessage
-                        , Form.group (groupDangerIfNot <| isValidStringProp connection.name)
+                        , Form.group []
                             [ Form.label [ for "nam" ] [ text "Name" ]
                             , Input.text
                                 [ Input.id "nam"
                                 , Input.onInput (UpdateConnection << setName connection)
                                 , Input.value connection.name
+                                , validityInput <| isValidStringProp connection.name
                                 ]
+                            , Form.invalidFeedback [] [ text "Cannot be empty." ]
                             , Form.help [] [ text "The connection's name" ]
                             ]
-                        , Form.group (groupDangerIfNot <| isValidIdProp connection.from)
+                        , Form.group []
                             [ Form.label [ for "from" ] [ text "From" ]
                             , Select.select
                                 [ Select.id "from"
                                 , Select.onChange (UpdateConnection << setFrom connection)
+                                , validitySelect <| isValidIdProp connection.from
                                 ]
                               <|
                                 serviceSelectOptions connection.from services
+                            , Form.invalidFeedback [] [ text "Select a service." ]
                             , Form.help [] [ text "First Endpoint" ]
                             ]
-                        , Form.group (groupDangerIfNot <| isValidIdProp connection.to)
+                        , Form.group []
                             [ Form.label [ for "to" ] [ text "To" ]
                             , Select.select
                                 [ Select.id "to"
                                 , Select.onChange (UpdateConnection << setTo connection)
+                                , validitySelect <| isValidIdProp connection.to
                                 ]
                               <|
                                 serviceSelectOptions connection.to services
+                            , Form.invalidFeedback [] [ text "Select a service." ]
                             , Form.help [] [ text "Second Endpoint" ]
                             ]
-                        , Form.group (groupDangerIfNot <| isValidStringProp connection.connectionType)
+                        , Form.group []
                             [ Form.label [ for "cont" ] [ text "Connection Type" ]
                             , Input.text
                                 [ Input.id "cont"
                                 , Input.onInput (UpdateConnection << setConnectionType connection)
                                 , Input.value connection.connectionType
+                                , validityInput <| isValidStringProp connection.connectionType
                                 ]
+                            , Form.invalidFeedback [] [ text "Cannot be empty." ]
                             , Form.help [] [ text "The protocol, etc." ]
                             ]
                         , Form.group []
@@ -191,13 +205,13 @@ view model =
                     ]
 
             ( Failure services, Failure connection ) ->
-                Grid.container [] [ Alert.danger [ text "No connection to server" ] ]
+                Grid.container [] [ Alert.simpleDanger [] [ text "No connection to server" ] ]
 
             ( _, Failure connection ) ->
-                Grid.container [] [ Alert.danger [ text "Connection not found" ] ]
+                Grid.container [] [ Alert.simpleDanger [] [ text "Connection not found" ] ]
 
             ( _, _ ) ->
-                Grid.container [] [ Alert.info [ text "loading.." ] ]
+                Grid.container [] [ Alert.simpleInfo [] [ text "loading.." ] ]
 
 
 serviceSelectOptions : Int -> List Service -> List (Select.Item msg)

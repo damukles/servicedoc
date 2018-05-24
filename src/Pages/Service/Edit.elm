@@ -92,38 +92,42 @@ view model =
         alertMessage =
             case model.saveAlert of
                 Just message ->
-                    Alert.danger [ text message ]
+                    Alert.simpleDanger [] [ text message ]
 
                 Nothing ->
                     text ""
 
-        groupDangerIfNot bool =
-            if bool then
-                []
+        validity isValid =
+            if isValid then
+                Input.success
             else
-                [ Form.groupDanger ]
+                Input.danger
     in
         case model.service of
             Success service ->
                 Grid.container []
                     [ Form.form []
                         [ alertMessage
-                        , Form.group (groupDangerIfNot <| isValidStringProp service.name)
+                        , Form.group []
                             [ Form.label [ for "nam" ] [ text "Name" ]
                             , Input.text
                                 [ Input.id "nam"
                                 , Input.onInput (UpdateService << setName service)
                                 , Input.value service.name
+                                , validity <| isValidStringProp service.name
                                 ]
+                            , Form.invalidFeedback [] [ text "Cannot be empty." ]
                             , Form.help [] [ text "The service's name" ]
                             ]
-                        , Form.group (groupDangerIfNot <| isValidStringProp service.hostedOn)
+                        , Form.group []
                             [ Form.label [ for "hon" ] [ text "Hosted on" ]
                             , Input.text
                                 [ Input.id "hon"
                                 , Input.onInput <| (UpdateService << setHostedOn service)
                                 , Input.value service.hostedOn
+                                , validity <| isValidStringProp service.hostedOn
                                 ]
+                            , Form.invalidFeedback [] [ text "Cannot be empty." ]
                             , Form.help [] [ text "The server or instance where the service is hosted" ]
                             ]
                         , Form.group []
@@ -143,10 +147,10 @@ view model =
                     ]
 
             Failure service ->
-                Grid.container [] [ Alert.danger [ text "Service not found or no connection to server" ] ]
+                Grid.container [] [ Alert.simpleDanger [] [ text "Service not found or no connection to server" ] ]
 
             _ ->
-                Grid.container [] [ Alert.danger [ text "loading.." ] ]
+                Grid.container [] [ Alert.simpleDanger [] [ text "loading.." ] ]
 
 
 setName : { b | name : a } -> c -> { b | name : c }
