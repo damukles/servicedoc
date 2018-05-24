@@ -1,5 +1,6 @@
 module View exposing (view)
 
+import App exposing (Model, Msg(..), Page(..))
 import Bootstrap.Grid as Grid
 import Bootstrap.Navbar as Navbar
 import Html exposing (Html, div, text)
@@ -10,7 +11,6 @@ import Pages.Graph
 import Pages.Service
 import Pages.Service.Edit
 import Routing exposing (Route(..))
-import Types exposing (..)
 
 
 view : Model -> Html Msg
@@ -35,7 +35,7 @@ navbar model =
 
 content : Model -> Html Msg
 content model =
-    case model.subPage of
+    case model.page of
         ServicesPage pageModel ->
             Html.map ServicesPageMsg <| Pages.Service.view pageModel
 

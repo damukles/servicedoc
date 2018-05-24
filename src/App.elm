@@ -1,4 +1,4 @@
-module App exposing (init, update, subscriptions)
+module App exposing (Model, Msg(..), Page(..), init, update, subscriptions)
 
 import Bootstrap.Navbar as Navbar
 import Navigation exposing (Location)
@@ -8,7 +8,32 @@ import Pages.Graph
 import Pages.Service
 import Pages.Service.Edit
 import Routing exposing (Route(..))
-import Types exposing (..)
+
+
+type Msg
+    = NewUrl String
+    | UrlChange Location
+    | NavbarMsg Navbar.State
+    | ServicesPageMsg Pages.Service.Msg
+    | ConnectionsPageMsg Pages.Connection.Msg
+    | EditConnectionPageMsg Pages.Connection.Edit.Msg
+    | EditServicePageMsg Pages.Service.Edit.Msg
+    | GraphPageMsg Pages.Graph.Msg
+
+
+type alias Model =
+    { currentLocation : Maybe Route
+    , navbar : Navbar.State
+    , page : Page
+    }
+
+
+type Page
+    = ServicesPage Pages.Service.Model
+    | ConnectionsPage Pages.Connection.Model
+    | EditConnectionPage Pages.Connection.Edit.Model
+    | EditServicePage Pages.Service.Edit.Model
+    | GraphPage Pages.Graph.Model
 
 
 init : Location -> ( Model, Cmd Msg )
@@ -23,14 +48,12 @@ init location =
         ( page, pageCmd ) =
             pageFromRoute currentLocation Nothing
     in
-        { currentLocation = currentLocation
-        , history = []
-        , navbar = navbarState
-        , subPage = page
-        }
-            ! [ navbarCmd
-              , pageCmd
-              ]
+        ( { currentLocation = currentLocation
+          , navbar = navbarState
+          , page = page
+          }
+        , Cmd.batch [ navbarCmd, pageCmd ]
+        )
 
 
 pageFromRoute : Maybe Route -> Maybe Route -> ( Page, Cmd Msg )
@@ -124,79 +147,79 @@ update msg model =
                 currentLocation =
                     Routing.parse location
 
-                ( page, cmd ) =
+                ( page, pageCmd ) =
                     pageFromRoute currentLocation model.currentLocation
             in
-                { model
-                    | history = location :: model.history
-                    , currentLocation = currentLocation
-                    , subPage = page
-                }
-                    ! [ cmd ]
+                ( { model
+                    | currentLocation = currentLocation
+                    , page = page
+                  }
+                , pageCmd
+                )
 
         NavbarMsg state ->
             { model | navbar = state } ! []
 
         ServicesPageMsg pageMsg ->
-            case model.subPage of
+            case model.page of
                 ServicesPage pageModel ->
                     let
                         ( pageModel_, pageCmd ) =
                             Pages.Service.update pageMsg pageModel
                     in
-                        { model | subPage = ServicesPage pageModel_ }
+                        { model | page = ServicesPage pageModel_ }
                             ! [ Cmd.map ServicesPageMsg pageCmd ]
 
                 _ ->
                     model ! []
 
         ConnectionsPageMsg pageMsg ->
-            case model.subPage of
+            case model.page of
                 ConnectionsPage pageModel ->
                     let
                         ( pageModel_, pageCmd ) =
                             Pages.Connection.update pageMsg pageModel
                     in
-                        { model | subPage = ConnectionsPage pageModel_ }
+                        { model | page = ConnectionsPage pageModel_ }
                             ! [ Cmd.map ConnectionsPageMsg pageCmd ]
 
                 _ ->
                     model ! []
 
         EditConnectionPageMsg pageMsg ->
-            case model.subPage of
+            case model.page of
                 EditConnectionPage pageModel ->
                     let
                         ( pageModel_, pageCmd ) =
                             Pages.Connection.Edit.update pageMsg pageModel
                     in
-                        { model | subPage = EditConnectionPage pageModel_ }
+                        { model | page = EditConnectionPage pageModel_ }
                             ! [ Cmd.map EditConnectionPageMsg pageCmd ]
 
                 _ ->
                     model ! []
 
         EditServicePageMsg pageMsg ->
-            case model.subPage of
+            case model.page of
                 EditServicePage pageModel ->
                     let
                         ( pageModel_, pageCmd ) =
                             Pages.Service.Edit.update pageMsg pageModel
                     in
-                        { model | subPage = EditServicePage pageModel_ }
+                        { model | page = EditServicePage pageModel_ }
                             ! [ Cmd.map EditServicePageMsg pageCmd ]
 
                 _ ->
                     model ! []
 
         GraphPageMsg pageMsg ->
-            case model.subPage of
+            case model.page of
                 GraphPage pageModel ->
                     let
                         ( pageModel_, pageCmd ) =
                             Pages.Graph.update pageMsg pageModel
                     in
-                        { model | subPage = GraphPage pageModel_ }
+                        { model | page = GraphPage pageModel_ }
                             ! [ Cmd.map GraphPageMsg pageCmd ]
 
                 _ ->
@@ -207,7 +230,7 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     let
         graphSub =
-            case model.subPage of
+            case model.page of
                 GraphPage subModel ->
                     Sub.map GraphPageMsg <| Pages.Graph.subscriptions subModel
 
