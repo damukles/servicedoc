@@ -12,7 +12,7 @@ import Routing exposing (Route(..))
 
 type Msg
     = NewUrl String
-    | UrlChange Location
+    | UrlChange (Maybe Route)
     | NavbarMsg Navbar.State
     | ServicesPageMsg Pages.Service.Msg
     | ConnectionsPageMsg Pages.Connection.Msg
@@ -22,8 +22,7 @@ type Msg
 
 
 type alias Model =
-    { currentLocation : Maybe Route
-    , navbar : Navbar.State
+    { navbar : Navbar.State
     , page : Page
     }
 
@@ -36,28 +35,24 @@ type Page
     | GraphPage Pages.Graph.Model
 
 
-init : Location -> ( Model, Cmd Msg )
-init location =
+init : Maybe Route -> ( Model, Cmd Msg )
+init route =
     let
         ( navbarState, navbarCmd ) =
             Navbar.initialState NavbarMsg
 
-        currentLocation =
-            Routing.parse location
-
         ( page, pageCmd ) =
-            pageFromRoute currentLocation Nothing
+            pageFromRoute route
     in
-        ( { currentLocation = currentLocation
-          , navbar = navbarState
+        ( { navbar = navbarState
           , page = page
           }
         , Cmd.batch [ navbarCmd, pageCmd ]
         )
 
 
-pageFromRoute : Maybe Route -> Maybe Route -> ( Page, Cmd Msg )
-pageFromRoute route lastRoute =
+pageFromRoute : Maybe Route -> ( Page, Cmd Msg )
+pageFromRoute route =
     case route of
         Just Services ->
             let
@@ -81,10 +76,10 @@ pageFromRoute route lastRoute =
                 ( ConnectionsPage pageModel, Cmd.map ConnectionsPageMsg pageCmd )
 
         Just ConnectionsAdd ->
-            connectionsEditPage Nothing lastRoute
+            connectionsEditPage Nothing
 
         Just (ConnectionsEdit id) ->
-            connectionsEditPage (Just id) lastRoute
+            connectionsEditPage (Just id)
 
         Just ServicesAdd ->
             let
@@ -110,19 +105,11 @@ pageFromRoute route lastRoute =
             graphPage Nothing
 
 
-connectionsEditPage : Maybe Int -> Maybe Route -> ( Page, Cmd Msg )
-connectionsEditPage id route =
+connectionsEditPage : Maybe Int -> ( Page, Cmd Msg )
+connectionsEditPage id =
     let
-        routeBack =
-            case route of
-                Just (ServicesConnections id) ->
-                    ServicesConnections id
-
-                _ ->
-                    Connections
-
         ( pageModel, pageCmd ) =
-            Pages.Connection.Edit.init id routeBack
+            Pages.Connection.Edit.init id
     in
         ( EditConnectionPage pageModel, Cmd.map EditConnectionPageMsg pageCmd )
 
@@ -142,20 +129,12 @@ update msg model =
         NewUrl url ->
             model ! [ Navigation.newUrl url ]
 
-        UrlChange location ->
+        UrlChange route ->
             let
-                currentLocation =
-                    Routing.parse location
-
                 ( page, pageCmd ) =
-                    pageFromRoute currentLocation model.currentLocation
+                    pageFromRoute route
             in
-                ( { model
-                    | currentLocation = currentLocation
-                    , page = page
-                  }
-                , pageCmd
-                )
+                ( { model | page = page }, pageCmd )
 
         NavbarMsg state ->
             { model | navbar = state } ! []

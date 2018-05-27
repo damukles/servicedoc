@@ -14,13 +14,11 @@ import Html.Attributes exposing (disabled, for, selected, value, class, hidden)
 import Http
 import Navigation
 import RemoteData exposing (RemoteData(..), WebData)
-import Routing exposing (Route(..))
 import Validation exposing (isValidIdProp, isValidStringProp)
 
 
 type alias Model =
     { connectionId : Maybe Int
-    , routeBack : Route
     , connection : WebData Connection
     , services : WebData (List Service)
     , saveAlert : Maybe String
@@ -36,8 +34,8 @@ type Msg
     | ResultSaveConnection (Result Http.Error Connection)
 
 
-init : Maybe Int -> Route -> ( Model, Cmd Msg )
-init connectionId routeBack =
+init : Maybe Int -> ( Model, Cmd Msg )
+init connectionId =
     let
         ( connection, connectionCmd ) =
             case connectionId of
@@ -48,7 +46,6 @@ init connectionId routeBack =
                     ( Success emptyConnection, Cmd.none )
     in
         { connectionId = connectionId
-        , routeBack = routeBack
         , connection = connection
         , services = NotAsked
         , saveAlert = Nothing
@@ -86,11 +83,11 @@ update msg model =
                 model ! [ cmd ]
 
         Cancel ->
-            model ! [ Navigation.newUrl <| Routing.getLink model.routeBack ]
+            model ! [ Navigation.back 1 ]
 
         ResultSaveConnection (Ok connection) ->
             { model | connection = Success connection }
-                ! [ Navigation.newUrl <| Routing.getLink model.routeBack ]
+                ! [ Navigation.back 1 ]
 
         ResultSaveConnection (Err err) ->
             { model | saveAlert = Just (toString err) } ! []
